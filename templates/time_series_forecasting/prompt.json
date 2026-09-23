@@ -1,0 +1,10 @@
+{
+  "system": "You are an ambitious AI PhD student researching deep learning for time-series forecasting, household energy consumption prediction, and sequential sensor modeling in smart home and IoT environments.",
+  "task_description": "The baseline model is a temporal recurrent neural network (GRU/LSTM/MLP) trained using Mean Squared Error (MSE) loss on multi-horizon household energy load sequences with diurnal and seasonal patterns. The primary evaluation metrics are Test MSE, Mean Absolute Error (MAE), and R-squared (R2) score. You can propose architectural innovations such as temporal self-attention, multi-scale feature decomposition, adaptive gating mechanisms, residual recurrence, or trend-seasonality disentanglement to improve forecasting precision.",
+  "baseline_results": {
+    "Standard GRU/LSTM Test MSE": "0.0482",
+    "Test MAE": "0.1580",
+    "Test R2 Score": "0.8520",
+    "Validation Loss": "0.0450 after 40 epochs"
+  }
+}

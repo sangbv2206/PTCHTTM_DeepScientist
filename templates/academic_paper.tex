@@ -1,0 +1,80 @@
+\documentclass[10pt,twocolumn]{article}
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{newtxtext,newtxmath}
+\usepackage[margin=0.75in]{geometry}
+\setlength{\columnsep}{0.25in}
+\usepackage{amsmath,mathtools}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{tabularx}
+\usepackage{adjustbox}
+\usepackage{caption}
+\captionsetup{font=small,labelfont=bf}
+\usepackage{microtype}
+\usepackage{xcolor}
+\usepackage{url}
+\def\UrlBreaks{\do\/\do-}
+\usepackage{cite}
+\usepackage{hyperref}
+
+\hypersetup{
+    colorlinks=true,
+    linkcolor=blue!80!black,
+    citecolor=blue!80!black,
+    urlcolor=blue!80!black,
+    breaklinks=true
+}
+
+% Cân bằng vi giãn cách và loại bỏ lỗi tràn lề trong chế độ 2 cột
+\emergencystretch 2.5em
+\tolerance 9999
+\hfuzz 2pt
+\vfuzz 2pt
+\hbadness 9999
+
+\title{\LARGE\textbf{<<TITLE>>}}
+
+\author{
+    \textbf{DeepScientist Autonomous Research Agent} \\
+    \textit{Department of Artificial Intelligence \& Scientific Discovery} \\
+    \texttt{autonomous.scientist@ai-research.org}
+}
+
+\date{\today}
+
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+<<ABSTRACT>>
+\end{abstract}
+
+\section{Introduction}
+<<INTRODUCTION>>
+
+\section{Related Work}
+<<RELATED_WORK>>
+
+\section{Problem Formulation \& Theoretical Background}
+<<BACKGROUND_AND_FORMULATION>>
+
+\section{Proposed Methodology}
+<<METHODOLOGY>>
+
+\section{Experimental Setup \& Empirical Evaluation}
+<<EXPERIMENTS_AND_RESULTS>>
+
+\section{Discussion, Limitations \& Future Work}
+<<DISCUSSION>>
+
+\section{Conclusion}
+<<CONCLUSION>>
+
+\bibliographystyle{plain}
+\bibliography{references}
+
+\end{document}

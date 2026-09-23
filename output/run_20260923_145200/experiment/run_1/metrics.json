@@ -1,0 +1,7 @@
+{
+  "Harrell C-index": "0.7517",
+  "Integrated Brier Score": "0.1299",
+  "Covariate Balance ASMD (Max)": "0.1347",
+  "ATE (Dual-agonist vs SGLT2i)": "-0.0171",
+  "ATE (Triple-agonist vs SGLT2i)": "-0.0495"
+}

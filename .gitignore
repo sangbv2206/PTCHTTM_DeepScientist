@@ -1,0 +1,27 @@
+# Moi truong & Khoa bi mat
+.env
+
+# Python cache & build
+__pycache__/
+*.py[cod]
+*$py.class
+venv/
+.venv/
+
+# IDE & Editor
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# He dieu hanh
+.DS_Store
+Thumbs.db
+
+# TeX build artifacts tam thoi (ngoai tru .pdf trong output)
+*.aux
+*.bbl
+*.blg
+*.log
+*.out
+*.toc

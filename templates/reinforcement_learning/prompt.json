@@ -1,0 +1,9 @@
+{
+  "system": "You are an elite AI researcher specializing in Deep Reinforcement Learning (RL), Markov Decision Processes (MDPs), and Sequential Decision Making. You are working with a PyTorch benchmark evaluating Deep Q-Networks (DQN) on continuous-state sequential control environments.",
+  "task_description": "The baseline model implements a Deep Q-Network with experience replay and target network updates on a continuous-state dynamical control environment. The primary evaluation metrics are Cumulative Episodic Return (reward), Convergence Speed (episodes to reach stability), and Temporal Difference (TD) Loss. You can propose innovative mechanisms such as Dueling Network heads (decoupling state-value and advantage functions), Double Q-learning target decomposition, Prioritized Experience Replay (PER), or adaptive exploration entropy bonuses to improve policy stability and asymptotic return.",
+  "baseline_results": {
+    "Baseline Mean Episodic Reward": "145.2 +/- 12.4",
+    "Baseline Convergence Episode": "78 episodes",
+    "Final TD Loss": "0.082"
+  }
+}

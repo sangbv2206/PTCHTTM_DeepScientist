@@ -1,0 +1,60 @@
+{
+  "topic": "The Effects of Air Pollution on Respiratory Health",
+  "data_coverage": {
+    "status": "STRONG",
+    "coverage_score": 1.0,
+    "coverage_percent": 100.0,
+    "matched_keywords": [
+      "air",
+      "pollution",
+      "respiratory",
+      "health"
+    ],
+    "missing_keywords": [],
+    "best_paper": {
+      "corpusid": 3173853,
+      "title": "Indoor air pollution in developing countries and acute lower respiratory infections in children",
+      "abstract": "BACKGROUND A critical review was conducted of the quantitative literature linking indoor air pollution from household use of biomass fuels with acute respiratory infections in young children, which is focused on, but not confined to, acute lower respiratory infection and pneumonia in children under two years in less developed countries. Biomass in the form of wood, crop residues, and animal dung is used in more than two fifths of the world's households as the principal fuel. METHODS Medline and other electronic databases were used, but it was also necessary to secure literature from colleagues in less developed countries where not all publications are yet internationally indexed. RESULTS The studies of indoor air pollution from household biomass fuels are reasonably consistent and, as a group, show a strong significant increase in risk for exposed young children compared with those living in households using cleaner fuels or being otherwise less exposed. Not all studies were able to adjust for confounders, but most of those that did so found that strong and significant risks remained. CONCLUSIONS It seems that the relative risks are likely to be significant for the exposures considered here. Since acute lower respiratory infection is the chief cause of death in children in less developed countries, and exacts a larger burden of disease than any other disease category for the world population, even small additional risks due to such a ubiquitous exposure as air pollution have important public health implications. In the case of indoor air pollution in households using biomass fuels, the risks also seem to be fairly strong, presumably because of the high daily concentrations of pollutants found in such settings and the large amount of time young children spend with their mothers doing household cooking. Given the large vulnerable populations at risk, there is an urgent need to conduct randomised trials to increase confidence in the cause-effect relationship, to quantify the risk more precisely, to determine the degree of reduction in exposure required to significantly improve health, and to establish the effectiveness of interventions."
+    },
+    "candidate_papers": [
+      {
+        "corpusid": 3173853,
+        "title": "Indoor air pollution in developing countries and acute lower respiratory infections in children",
+        "abstract": "BACKGROUND A critical review was conducted of the quantitative literature linking indoor air pollution from household use of biomass fuels with acute respiratory infections in young children, which is focused on, but not confined to, acute lower respiratory infection and pneumonia in children under two years in less developed countries. Biomass in the form of wood, crop residues, and animal dung is used in more than two fifths of the world's households as the principal fuel. METHODS Medline and other electronic databases were used, but it was also necessary to secure literature from colleagues in less developed countries where not all publications are yet internationally indexed. RESULTS The studies of indoor air pollution from household biomass fuels are reasonably consistent and, as a group, show a strong significant increase in risk for exposed young children compared with those living in households using cleaner fuels or being otherwise less exposed. Not all studies were able to adjust for confounders, but most of those that did so found that strong and significant risks remained. CONCLUSIONS It seems that the relative risks are likely to be significant for the exposures considered here. Since acute lower respiratory infection is the chief cause of death in children in less developed countries, and exacts a larger burden of disease than any other disease category for the world population, even small additional risks due to such a ubiquitous exposure as air pollution have important public health implications. In the case of indoor air pollution in households using biomass fuels, the risks also seem to be fairly strong, presumably because of the high daily concentrations of pollutants found in such settings and the large amount of time young children spend with their mothers doing household cooking. Given the large vulnerable populations at risk, there is an urgent need to conduct randomised trials to increase confidence in the cause-effect relationship, to quantify the risk more precisely, to determine the degree of reduction in exposure required to significantly improve health, and to establish the effectiveness of interventions."
+      },
+      {
+        "corpusid": 9520008,
+        "title": "Testing selected behaviors to reduce indoor air pollution exposure in young children.",
+        "abstract": "Indoor air pollution is responsible for the deaths and illness of millions of young children in developing countries. This study investigated the acceptability (willingness to try) and feasibility (ability to perform) of four indoor air pollution reduction behaviors (improve stove maintenance practices, child location practices, ventilation practices and reduce the duration of solid fuel burning). The study further aimed to identify the motivations for and barriers against modifying the behaviors, the perceived impact of the behaviors on children's respiratory health, and families intention to continue with the behaviors. Thirty families in a rural village of South Africa tried out one or more of the behaviors over a 4-week trial period during winter 2002. Improving stove maintenance and reducing the duration of solid fuel burning proved to be very difficult for most families. It is recommended that the main intervention should focus on improving child location and ventilation practices."
+      },
+      {
+        "corpusid": 23181661,
+        "title": "A Behavioral Intervention to Reduce Child Exposure to Indoor Air Pollution: Identifying Possible Target Behaviors",
+        "abstract": "Indoor air pollution has been causally linked to acute lower respiratory infections in children younger than 5. The aim of this study was to identify target behaviors for a behavioral intervention to reduce child exposure to indoor air pollution by attempting to answer two research questions: Which behaviors are protective of child respiratory health in the study context? and Which behaviors do mothers recommend to reduce their children’s exposure to indoor air pollution? Observations and interviews were conducted with 67 mother-child combinations. The authors recommend that four behavioral clusters should be considered for the main intervention. These are to improve stove maintenance practices, to increase the duration that two ventilation sources are opened while a fire is burning, to reduce the time that children spend close to burning fires, and to reduce the duration of solid fuel burning."
+      },
+      {
+        "corpusid": 44621807,
+        "title": "Indoor air pollution in developing countries: recommendations for research.",
+        "abstract": "Available studies indicate that indoor air pollution (IAP) from household cooking and space heating apparently causes substantial ill-health in developing countries where the majority of households rely on solid fuels (coal or biomass as wood, crop residues, and dung), but there are many remaining uncertainties. To pin down impacts in order to effectively target interventions, research is particularly needed in three areas: (1) epidemiology: case-control studies for tuberculosis (TB) and cardiovascular disease in women and randomized intervention trials for childhood acute respiratory diseases and adverse pregnancy outcomes; (2) exposure assessment: techniques and equipment for inexpensive exposure assessment at large scale, including national level surveys; (3) interventions: engineering and dissemination approaches for improved stoves, fuels, ventilation, and behavior that reliably and economically reduce exposure. There are also important potential synergisms between efforts to reduce greenhouse gas emissions and those to reduce health-damaging emissions from solid-fuel stoves. The substitution of biomass by coal being considered in some countries should be pursued with caution because of the known serious health effects of household coal use."
+      },
+      {
+        "corpusid": 257717307,
+        "title": "Air pollution and COPD: GOLD 2023 committee report",
+        "abstract": "Exposure to air pollution is a major contributor to the pathogenesis of COPD worldwide. Indeed, most recent estimates suggest that 50% of the total attributable risk of COPD may be related to air pollution. In response, the Global Initiative for Chronic Obstructive Lung Disease (GOLD) Scientific Committee performed a comprehensive review on this topic, qualitatively synthesised the evidence to date and proffered recommendations to mitigate the risk. The review found that both gaseous and particulate components of air pollution are likely contributors to COPD. There are no absolutely safe levels of ambient air pollution and the relationship between air pollution levels and respiratory events is supra-linear. Wildfires and extreme weather events such as heat waves, which are becoming more common owing to climate change, are major threats to COPD patients and acutely increase their risk of morbidity and mortality. Exposure to air pollution also impairs lung growth in children and as such may lead to developmental COPD. GOLD recommends strong public health policies around the world to reduce ambient air pollution and for implementation of public warning systems and advisories, including where possible the use of personalised apps, to alert patients when ambient air pollution levels exceed acceptable minimal thresholds. When household particulate content exceeds acceptable thresholds, patients should consider using air cleaners and filters where feasible. Air pollution is a major health threat to patients living with COPD and actions are urgently required to reduce the morbidity and mortality related to poor air quality around the world. Air pollution is a major global threat to patients with COPD. Strong public health policies to reduce air pollution levels along with targeted mitigation strategies are urgently needed. https://bit.ly/3L3dN7e"
+      }
+    ],
+    "num_candidates": 5,
+    "warning": null,
+    "solutions": [
+      "Cơ sở dữ liệu hỗ trợ tốt, có đầy đủ tài liệu nền tảng để trích dẫn và đối sánh."
+    ]
+  },
+  "template_suitability": {
+    "is_supported": true,
+    "confidence": 9,
+    "selected_template": "time_series_forecasting",
+    "reasoning": "Air pollution levels (e.g., PM2.5, NO2, ozone) and corresponding respiratory health metrics or hospital admissions are inherently sequential temporal data that can be modeled and predicted using time-series forecasting benchmarks (such as RNNs, LSTMs, or linear temporal models).",
+    "suggestions": "Adapt the time-series forecasting template to handle multi-variate environmental sensor data and lagged pollution covariates to predict short- and long-term respiratory morbidity indicators."
+  },
+  "selected_template": "time_series_forecasting"
+}

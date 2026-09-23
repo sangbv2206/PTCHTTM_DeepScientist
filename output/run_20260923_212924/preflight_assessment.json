@@ -1,0 +1,669 @@
+{
+  "topic": "Kolmogorov-Arnold Networks KAN for Scientific Machine Learning",
+  "data_coverage": {
+    "status": "MODERATE",
+    "coverage_score": 0.25,
+    "coverage_percent": 25.0,
+    "matched_keywords": [
+      "scientific"
+    ],
+    "missing_keywords": [
+      "kolmogorov",
+      "arnold",
+      "kan"
+    ],
+    "best_paper": {
+      "corpusid": 260384616,
+      "externalids": {
+        "ACL": null,
+        "DBLP": "journals/nature/WangFD0HLCLKDAB23",
+        "ArXiv": null,
+        "MAG": null,
+        "CorpusId": "260384616",
+        "PubMed": "37532811",
+        "DOI": "10.1038/s41586-023-06221-2",
+        "PubMedCentral": null
+      },
+      "url": "https://www.semanticscholar.org/paper/f08060425aa8a212d74185ee23a08329b89abcd2",
+      "title": "Scientific discovery in the age of artificial intelligence",
+      "authors": [
+        {
+          "authorId": "46506460",
+          "name": "Hanchen Wang"
+        },
+        {
+          "authorId": "2427076",
+          "name": "Tianfan Fu"
+        },
+        {
+          "authorId": "93584228",
+          "name": "Yuanqi Du"
+        },
+        {
+          "authorId": "2153575781",
+          "name": "Wenhao Gao"
+        },
+        {
+          "authorId": "49454094",
+          "name": "Kexin Huang"
+        },
+        {
+          "authorId": "2117941801",
+          "name": "Ziming Liu"
+        },
+        {
+          "authorId": "89356020",
+          "name": "P. Chandak"
+        },
+        {
+          "authorId": "1563693999",
+          "name": "Shengchao Liu"
+        },
+        {
+          "authorId": "2226485816",
+          "name": "Peter Van Katwyk"
+        },
+        {
+          "authorId": "48860334",
+          "name": "Andreea Deac"
+        },
+        {
+          "authorId": "2047844",
+          "name": "Anima Anandkumar"
+        },
+        {
+          "authorId": "46354410",
+          "name": "K. Bergen"
+        },
+        {
+          "authorId": "2188778449",
+          "name": "Carla P. Gomes"
+        },
+        {
+          "authorId": "2226475487",
+          "name": "Shirley Ho"
+        },
+        {
+          "authorId": "143967473",
+          "name": "Pushmeet Kohli"
+        },
+        {
+          "authorId": "1764249",
+          "name": "Joan Lasenby"
+        },
+        {
+          "authorId": "1702139",
+          "name": "J. Leskovec"
+        },
+        {
+          "authorId": "2110264337",
+          "name": "Tie-Yan Liu"
+        },
+        {
+          "authorId": "2613935",
+          "name": "A. Manrai"
+        },
+        {
+          "authorId": "2226493959",
+          "name": "Debora S. Marks"
+        },
+        {
+          "authorId": "2378027",
+          "name": "Bharath Ramsundar"
+        },
+        {
+          "authorId": "2159642226",
+          "name": "Le Song"
+        },
+        {
+          "authorId": "1738536",
+          "name": "Jimeng Sun"
+        },
+        {
+          "authorId": "2115854801",
+          "name": "Jian Tang"
+        },
+        {
+          "authorId": "3444569",
+          "name": "Petar Velickovic"
+        },
+        {
+          "authorId": "2228923747",
+          "name": "Max Welling"
+        },
+        {
+          "authorId": "2181109681",
+          "name": "Linfeng Zhang"
+        },
+        {
+          "authorId": "13027820",
+          "name": "Connor W. Coley"
+        },
+        {
+          "authorId": "1865800402",
+          "name": "Y. Bengio"
+        },
+        {
+          "authorId": "2095762",
+          "name": "M. Zitnik"
+        }
+      ],
+      "venue": "Nature",
+      "publicationvenueid": "6c24a0a0-b07d-4d7b-a19b-fd09a3ed453a",
+      "year": 2023,
+      "referencecount": 270,
+      "citationcount": 82,
+      "influentialcitationcount": 2,
+      "isopenaccess": false,
+      "s2fieldsofstudy": [
+        {
+          "category": "Computer Science",
+          "source": "s2-fos-model"
+        },
+        {
+          "category": "Computer Science",
+          "source": "external"
+        },
+        {
+          "category": "Medicine",
+          "source": "external"
+        }
+      ],
+      "publicationtypes": [
+        "Review",
+        "JournalArticle"
+      ],
+      "publicationdate": "2023-08-01",
+      "journal": {
+        "name": "Nature",
+        "pages": "47 - 60",
+        "volume": "620"
+      }
+    },
+    "candidate_papers": [
+      {
+        "corpusid": 260384616,
+        "externalids": {
+          "ACL": null,
+          "DBLP": "journals/nature/WangFD0HLCLKDAB23",
+          "ArXiv": null,
+          "MAG": null,
+          "CorpusId": "260384616",
+          "PubMed": "37532811",
+          "DOI": "10.1038/s41586-023-06221-2",
+          "PubMedCentral": null
+        },
+        "url": "https://www.semanticscholar.org/paper/f08060425aa8a212d74185ee23a08329b89abcd2",
+        "title": "Scientific discovery in the age of artificial intelligence",
+        "authors": [
+          {
+            "authorId": "46506460",
+            "name": "Hanchen Wang"
+          },
+          {
+            "authorId": "2427076",
+            "name": "Tianfan Fu"
+          },
+          {
+            "authorId": "93584228",
+            "name": "Yuanqi Du"
+          },
+          {
+            "authorId": "2153575781",
+            "name": "Wenhao Gao"
+          },
+          {
+            "authorId": "49454094",
+            "name": "Kexin Huang"
+          },
+          {
+            "authorId": "2117941801",
+            "name": "Ziming Liu"
+          },
+          {
+            "authorId": "89356020",
+            "name": "P. Chandak"
+          },
+          {
+            "authorId": "1563693999",
+            "name": "Shengchao Liu"
+          },
+          {
+            "authorId": "2226485816",
+            "name": "Peter Van Katwyk"
+          },
+          {
+            "authorId": "48860334",
+            "name": "Andreea Deac"
+          },
+          {
+            "authorId": "2047844",
+            "name": "Anima Anandkumar"
+          },
+          {
+            "authorId": "46354410",
+            "name": "K. Bergen"
+          },
+          {
+            "authorId": "2188778449",
+            "name": "Carla P. Gomes"
+          },
+          {
+            "authorId": "2226475487",
+            "name": "Shirley Ho"
+          },
+          {
+            "authorId": "143967473",
+            "name": "Pushmeet Kohli"
+          },
+          {
+            "authorId": "1764249",
+            "name": "Joan Lasenby"
+          },
+          {
+            "authorId": "1702139",
+            "name": "J. Leskovec"
+          },
+          {
+            "authorId": "2110264337",
+            "name": "Tie-Yan Liu"
+          },
+          {
+            "authorId": "2613935",
+            "name": "A. Manrai"
+          },
+          {
+            "authorId": "2226493959",
+            "name": "Debora S. Marks"
+          },
+          {
+            "authorId": "2378027",
+            "name": "Bharath Ramsundar"
+          },
+          {
+            "authorId": "2159642226",
+            "name": "Le Song"
+          },
+          {
+            "authorId": "1738536",
+            "name": "Jimeng Sun"
+          },
+          {
+            "authorId": "2115854801",
+            "name": "Jian Tang"
+          },
+          {
+            "authorId": "3444569",
+            "name": "Petar Velickovic"
+          },
+          {
+            "authorId": "2228923747",
+            "name": "Max Welling"
+          },
+          {
+            "authorId": "2181109681",
+            "name": "Linfeng Zhang"
+          },
+          {
+            "authorId": "13027820",
+            "name": "Connor W. Coley"
+          },
+          {
+            "authorId": "1865800402",
+            "name": "Y. Bengio"
+          },
+          {
+            "authorId": "2095762",
+            "name": "M. Zitnik"
+          }
+        ],
+        "venue": "Nature",
+        "publicationvenueid": "6c24a0a0-b07d-4d7b-a19b-fd09a3ed453a",
+        "year": 2023,
+        "referencecount": 270,
+        "citationcount": 82,
+        "influentialcitationcount": 2,
+        "isopenaccess": false,
+        "s2fieldsofstudy": [
+          {
+            "category": "Computer Science",
+            "source": "s2-fos-model"
+          },
+          {
+            "category": "Computer Science",
+            "source": "external"
+          },
+          {
+            "category": "Medicine",
+            "source": "external"
+          }
+        ],
+        "publicationtypes": [
+          "Review",
+          "JournalArticle"
+        ],
+        "publicationdate": "2023-08-01",
+        "journal": {
+          "name": "Nature",
+          "pages": "47 - 60",
+          "volume": "620"
+        }
+      },
+      {
+        "corpusid": 13469635,
+        "externalids": {
+          "ACL": null,
+          "DBLP": null,
+          "ArXiv": null,
+          "MAG": "1580590571",
+          "CorpusId": "13469635",
+          "PubMed": null,
+          "DOI": "10.1353/cye.2004.0059",
+          "PubMedCentral": null
+        },
+        "url": "https://www.semanticscholar.org/paper/9890ca9deaf797b3e8ef789bdefdef7cd2f35388",
+        "title": "Extending and Augmenting Scientific Enquiry through Pervasive Learning Environments",
+        "authors": [
+          {
+            "authorId": "1685816",
+            "name": "Y. Rogers"
+          },
+          {
+            "authorId": "144347283",
+            "name": "S. Price"
+          }
+        ],
+        "venue": "Children, Youth and Environments",
+        "publicationvenueid": "05773b5a-593c-403b-a962-fdd6b0b2ddd5",
+        "year": 2023,
+        "referencecount": 32,
+        "citationcount": 27,
+        "influentialcitationcount": 1,
+        "isopenaccess": false,
+        "s2fieldsofstudy": [
+          {
+            "category": "Computer Science",
+            "source": "s2-fos-model"
+          },
+          {
+            "category": "Education",
+            "source": "s2-fos-model"
+          },
+          {
+            "category": "Engineering",
+            "source": "s2-fos-model"
+          },
+          {
+            "category": "Environmental Science",
+            "source": "s2-fos-model"
+          },
+          {
+            "category": "Engineering",
+            "source": "external"
+          }
+        ],
+        "publicationtypes": [
+          "JournalArticle"
+        ],
+        "publicationdate": "2023-05-25",
+        "journal": {
+          "name": "Children, Youth and Environments",
+          "pages": "67 - 83",
+          "volume": "14"
+        }
+      },
+      {
+        "corpusid": 258428378,
+        "externalids": {
+          "ACL": null,
+          "DBLP": null,
+          "ArXiv": null,
+          "MAG": null,
+          "CorpusId": "258428378",
+          "PubMed": "37125534",
+          "DOI": "10.1161/STR.0000000000000430",
+          "PubMedCentral": null
+        },
+        "url": "https://www.semanticscholar.org/paper/178b554a3fd4bc217d62bfcd32b339c9ff734c81",
+        "title": "Cognitive Impairment After Ischemic and Hemorrhagic Stroke: A Scientific Statement From the American Heart Association/American Stroke Association",
+        "authors": [
+          {
+            "authorId": "67272269",
+            "name": "Nada El Husseini"
+          },
+          {
+            "authorId": "2659324",
+            "name": "I. Katzan"
+          },
+          {
+            "authorId": "3125652",
+            "name": "N. Rost"
+          },
+          {
+            "authorId": "5257870",
+            "name": "M. Blake"
+          },
+          {
+            "authorId": "40137665",
+            "name": "Eeeseung Byun"
+          },
+          {
+            "authorId": "6419653",
+            "name": "S. Pendlebury"
+          },
+          {
+            "authorId": "4315527",
+            "name": "Hugo J. Aparicio"
+          },
+          {
+            "authorId": "4667014",
+            "name": "M. Marquine"
+          },
+          {
+            "authorId": "4621082",
+            "name": "R. Gottesman"
+          },
+          {
+            "authorId": "144765494",
+            "name": "Eric E. Smith"
+          }
+        ],
+        "venue": "Stroke",
+        "publicationvenueid": "9aef3b55-2b26-4ede-8def-fcd0839b7d9d",
+        "year": 2023,
+        "referencecount": 190,
+        "citationcount": 17,
+        "influentialcitationcount": 0,
+        "isopenaccess": false,
+        "s2fieldsofstudy": [
+          {
+            "category": "Medicine",
+            "source": "s2-fos-model"
+          },
+          {
+            "category": "Medicine",
+            "source": "external"
+          }
+        ],
+        "publicationtypes": [
+          "Review",
+          "JournalArticle"
+        ],
+        "publicationdate": "2023-05-01",
+        "journal": {
+          "name": "Stroke",
+          "pages": "e272 - e291",
+          "volume": "54"
+        }
+      },
+      {
+        "corpusid": 64338800,
+        "externalids": {
+          "ACL": null,
+          "DBLP": null,
+          "ArXiv": null,
+          "MAG": "2470409715",
+          "CorpusId": "64338800",
+          "PubMed": null,
+          "DOI": "10.1353/cye.2011.0010",
+          "PubMedCentral": null
+        },
+        "url": "https://www.semanticscholar.org/paper/64eede8c840a05089b1b04ba88be63ff31241ae1",
+        "title": "Designing for Play-Based Learning of Scientific Concepts: Digital Tools for Bridging School and Science Museum Contexts",
+        "authors": [
+          {
+            "authorId": "2449066",
+            "name": "Cecilie Flo Jahreie"
+          },
+          {
+            "authorId": "2853881",
+            "name": "H. Arnseth"
+          },
+          {
+            "authorId": "2951985",
+            "name": "Ingeborg Krange"
+          },
+          {
+            "authorId": "1403396833",
+            "name": "Ole Smørdal"
+          },
+          {
+            "authorId": "143922108",
+            "name": "A. Kluge"
+          }
+        ],
+        "venue": "Children, Youth and Environments",
+        "publicationvenueid": "05773b5a-593c-403b-a962-fdd6b0b2ddd5",
+        "year": 2023,
+        "referencecount": 42,
+        "citationcount": 14,
+        "influentialcitationcount": 0,
+        "isopenaccess": false,
+        "s2fieldsofstudy": [
+          {
+            "category": "Education",
+            "source": "s2-fos-model"
+          },
+          {
+            "category": "Computer Science",
+            "source": "s2-fos-model"
+          },
+          {
+            "category": "Psychology",
+            "source": "external"
+          }
+        ],
+        "publicationtypes": [
+          "JournalArticle"
+        ],
+        "publicationdate": "2023-05-18",
+        "journal": {
+          "name": "Children, Youth and Environments",
+          "pages": "236 - 255",
+          "volume": "21"
+        }
+      },
+      {
+        "corpusid": 259991511,
+        "externalids": {
+          "ACL": null,
+          "DBLP": "journals/corr/abs-2307-10635",
+          "ArXiv": "2307.10635",
+          "MAG": null,
+          "CorpusId": "259991511",
+          "PubMed": null,
+          "DOI": "10.48550/arXiv.2307.10635",
+          "PubMedCentral": null
+        },
+        "url": "https://www.semanticscholar.org/paper/4993258852711c4e3d0011325ac3db680eae84f4",
+        "title": "SciBench: Evaluating College-Level Scientific Problem-Solving Abilities of Large Language Models",
+        "authors": [
+          {
+            "authorId": "2224092326",
+            "name": "Xiaoxuan Wang"
+          },
+          {
+            "authorId": "3407296",
+            "name": "Ziniu Hu"
+          },
+          {
+            "authorId": "2887562",
+            "name": "Pan Lu"
+          },
+          {
+            "authorId": "2653121",
+            "name": "Yanqiao Zhu"
+          },
+          {
+            "authorId": "47540245",
+            "name": "Jieyu Zhang"
+          },
+          {
+            "authorId": "2224018745",
+            "name": "Satyen Subramaniam"
+          },
+          {
+            "authorId": "2224017080",
+            "name": "Arjun R. Loomba"
+          },
+          {
+            "authorId": "2145408511",
+            "name": "Shichang Zhang"
+          },
+          {
+            "authorId": "2109461904",
+            "name": "Yizhou Sun"
+          },
+          {
+            "authorId": "2158624285",
+            "name": "Wei Wang"
+          }
+        ],
+        "venue": "arXiv.org",
+        "publicationvenueid": "1901e811-ee72-4b20-8f7e-de08cd395a10",
+        "year": 2023,
+        "referencecount": 48,
+        "citationcount": 14,
+        "influentialcitationcount": 2,
+        "isopenaccess": false,
+        "s2fieldsofstudy": [
+          {
+            "category": "Computer Science",
+            "source": "s2-fos-model"
+          },
+          {
+            "category": "Mathematics",
+            "source": "s2-fos-model"
+          },
+          {
+            "category": "Computer Science",
+            "source": "external"
+          }
+        ],
+        "publicationtypes": [
+          "JournalArticle"
+        ],
+        "publicationdate": "2023-07-20",
+        "journal": {
+          "name": "ArXiv",
+          "pages": null,
+          "volume": "abs/2307.10635"
+        }
+      }
+    ],
+    "num_candidates": 5,
+    "warning": "Chủ đề 'Kolmogorov-Arnold Networks KAN for Scientific Machine Learning' có dữ liệu liên quan một phần (25% từ khóa cốt lõi). Một số khía cạnh có thể thiếu tài liệu trực tiếp.",
+    "solutions": [
+      "Hệ thống sẽ kết hợp bài báo gần nhất với khả năng suy luận mở của Gemini để bổ sung khoảng trống kiến thức.",
+      "Có thể bổ sung thêm các bài báo chuyên sâu vào data/papers.jsonl để tăng độ chính xác."
+    ]
+  },
+  "template_suitability": {
+    "is_supported": true,
+    "confidence": 8,
+    "selected_template": "time_series_forecasting",
+    "reasoning": "Kolmogorov-Arnold Networks (KAN) là một kiến trúc mạng nơ-ron thay thế MLP, thường được ứng dụng mạnh mẽ trong Scientific Machine Learning (SciML), giải phương trình vi phân, và mô hình hóa các hệ thống động lực hoặc chuỗi thời gian phi tuyến tính. Trong số các template hiện có, 'time_series_forecasting' là môi trường phù hợp nhất để thử nghiệm khả năng khớp hàm (function approximation) và dự báo chuỗi của KAN so với MLP truyền thống.",
+    "suggestions": "Có thể thử nghiệm thay thế các lớp MLP tuyến tính/phi tuyến tiêu chuẩn trong mô hình dự báo chuỗi thời gian bằng các hàm B-spline của KAN, đồng thời so sánh độ chính xác và khả năng diễn giải (interpretability)."
+  },
+  "selected_template": "time_series_forecasting"
+}

@@ -1,0 +1,10 @@
+{
+  "best_test_mse": 0.004718344658613205,
+  "best_test_mae": 0.05293312296271324,
+  "best_test_r2": 0.8988751769065857,
+  "best_val_loss": 0.0032515358179807663,
+  "final_train_loss": 0.04036851139629588,
+  "training_time_sec": 14.98453402519226,
+  "epochs": 40,
+  "method": "Adaptive Framework for KAN for Scientific Machine Learning (AFU)"
+}

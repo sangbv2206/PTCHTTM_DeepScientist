@@ -1,0 +1,18 @@
+services:
+  deepscientist:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: deepscientist:latest
+    container_name: deepscientist-app
+    env_file:
+      - .env
+    environment:
+      - PYTHONUNBUFFERED=1
+    volumes:
+      # Mount thu muc ket qua ra may host de truc tiep xem PDF va bieu do
+      - ./output:/app/output
+      # Mount tap du lieu tri thuc (neu co cap nhat hoac cache)
+      - ./data:/app/data
+    # Mac dinh chay chu de tuy chon (co the ghi de bang tham so command)
+    command: ["--topic", "Kolmogorov-Arnold Networks KAN for Scientific Machine Learning"]

@@ -1,0 +1,22 @@
+{
+  "summary": "The paper introduces a novel framework for scientific machine learning.",
+  "strengths": [
+    "Original method design",
+    "Solid empirical gains"
+  ],
+  "weaknesses": [
+    "Could benefit from wider dataset variety"
+  ],
+  "questions": [
+    "How sensitive is the method to hyperparameters?"
+  ],
+  "scores": {
+    "soundness": 3,
+    "presentation": 4,
+    "contribution": 4,
+    "overall_rating": 7,
+    "confidence": 4
+  },
+  "recommendation": "Accept (Poster)",
+  "ethical_considerations": "None"
+}

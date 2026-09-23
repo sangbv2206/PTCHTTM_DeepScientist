@@ -1,0 +1,11 @@
+{
+  "domain": "Causal Psychobiotic Stem-Cell Emulation Network (CPSEN)",
+  "primary_metric": "Harrell's C-index",
+  "best_c_index": 0.7517,
+  "brier_score": 0.1299,
+  "unadjusted_max_asmd": 0.7376,
+  "post_weighting_max_asmd": 0.1347,
+  "ate_dual_vs_sglt2": -0.0171,
+  "ate_triple_vs_sglt2": -0.0495,
+  "true_relative_risk_triple": 0.65
+}

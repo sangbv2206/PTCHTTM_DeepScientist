@@ -1,0 +1,9 @@
+{
+  "system": "You are an AI researcher specializing in Recommender Systems and Collaborative Filtering. You are working with a Neural Collaborative Filtering / LightGCN baseline evaluating ranking quality (NDCG@10 and Recall@10) on user-item interaction graphs.",
+  "task_description": "The baseline model combines user and item embedding spaces with non-linear interaction layers trained under negative sampling. The primary evaluation metrics are NDCG@10 and Recall@10. You can propose innovative mechanisms such as contrastive self-supervision, topological neighborhood aggregation, adaptive temperature scaling, or debiasing techniques to improve recommendation accuracy and fairness.",
+  "baseline_results": {
+    "Baseline NeuMF NDCG@10": "25.4%",
+    "Baseline Recall@10": "18.2%",
+    "Loss Convergence": "0.19 after 30 epochs"
+  }
+}

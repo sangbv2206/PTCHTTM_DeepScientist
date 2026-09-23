@@ -1,0 +1,189 @@
+{
+  "topic": "Kolmogorov-Arnold Networks KAN for Scientific Machine Learning",
+  "data_coverage": {
+    "status": "MODERATE",
+    "coverage_score": 0.25,
+    "coverage_percent": 25.0,
+    "top_relevance_score": 112.2,
+    "matched_keywords": [
+      "scientific"
+    ],
+    "missing_keywords": [
+      "kolmogorov",
+      "arnold",
+      "kan"
+    ],
+    "best_paper": {
+      "corpusid": 901186000,
+      "title": "KAN 2.0: Kolmogorov-Arnold Networks Meet Science",
+      "abstract": "A major challenge of AI + Science lies in their inherent incompatibility: today's AI is primarily based on connectionism, while science depends on symbolism. To bridge the two worlds, we propose a framework to seamlessly synergize Kolmogorov-Arnold Networks (KANs) and science. The framework highlights KANs' usage for three aspects of scientific discovery: identifying relevant features, revealing modular structures, and discovering symbolic formulas. The synergy is bidirectional: science to KAN (incorporating scientific knowledge into KANs), and KAN to science (extracting scientific insights from KANs). We highlight major new functionalities in the pykan package: (1) MultKAN: KANs with multiplication nodes. (2) kanpiler: a KAN compiler that compiles symbolic formulas into KANs. (3) tree converter: convert KANs (or any neural networks) to tree graphs. Based on these tools, we demonstrate KANs' capability to discover various types of physical laws, including conserved quantities, Lagrangians, symmetries, and constitutive laws.",
+      "authors": [
+        {
+          "name": "Ziming Liu"
+        },
+        {
+          "name": "Pingchuan Ma"
+        },
+        {
+          "name": "Yixuan Wang"
+        },
+        {
+          "name": "Wojciech Matusik"
+        },
+        {
+          "name": "Max Tegmark"
+        }
+      ],
+      "venue": "arXiv (Cornell University)",
+      "year": 2024,
+      "citationcount": 49,
+      "url": "https://doi.org/10.48550/arxiv.2408.10205",
+      "source": "OpenAlex"
+    },
+    "candidate_papers": [
+      {
+        "corpusid": 901186000,
+        "title": "KAN 2.0: Kolmogorov-Arnold Networks Meet Science",
+        "abstract": "A major challenge of AI + Science lies in their inherent incompatibility: today's AI is primarily based on connectionism, while science depends on symbolism. To bridge the two worlds, we propose a framework to seamlessly synergize Kolmogorov-Arnold Networks (KANs) and science. The framework highlights KANs' usage for three aspects of scientific discovery: identifying relevant features, revealing modular structures, and discovering symbolic formulas. The synergy is bidirectional: science to KAN (incorporating scientific knowledge into KANs), and KAN to science (extracting scientific insights from KANs). We highlight major new functionalities in the pykan package: (1) MultKAN: KANs with multiplication nodes. (2) kanpiler: a KAN compiler that compiles symbolic formulas into KANs. (3) tree converter: convert KANs (or any neural networks) to tree graphs. Based on these tools, we demonstrate KANs' capability to discover various types of physical laws, including conserved quantities, Lagrangians, symmetries, and constitutive laws.",
+        "authors": [
+          {
+            "name": "Ziming Liu"
+          },
+          {
+            "name": "Pingchuan Ma"
+          },
+          {
+            "name": "Yixuan Wang"
+          },
+          {
+            "name": "Wojciech Matusik"
+          },
+          {
+            "name": "Max Tegmark"
+          }
+        ],
+        "venue": "arXiv (Cornell University)",
+        "year": 2024,
+        "citationcount": 49,
+        "url": "https://doi.org/10.48550/arxiv.2408.10205",
+        "source": "OpenAlex"
+      },
+      {
+        "corpusid": 901541587,
+        "title": "Conformalized-KANs: uncertainty quantification with coverage guarantees for Kolmogorov–Arnold Networks (KANs) in scientific machine learning",
+        "abstract": "Abstract This paper explores uncertainty quantification (UQ) methods in the context of Kolmogorov–Arnold Networks (KANs). We apply an ensemble approach to KANs to obtain a heuristic measure of UQ, enhancing interpretability and robustness in modeling complex functions. However, particularly in data-limited and complex scientific settings, ensemble-based uncertainty estimates, as is the case for many UQ methods, are sensitive to implicit distributional assumptions and do not provide formal coverage guarantees. Building on this, we develop conformalized-KANs, a conformal UQ framework for KANs that combines ensemble-based uncertainty estimates with split conformal prediction to generate calibrated prediction intervals with formal coverage guarantees. Numerical experiments are conducted to evaluate the effectiveness of these methods, focusing particularly on the robustness and accuracy of the prediction intervals under various hyperparameter settings. We further show that this framework extends naturally to recent KAN variants, including finite basis KANs and multi-fidelity KANs. The results demonstrate the potential of our approaches to improve the reliability and applicability of KANs in scientific machine learning.",
+        "authors": [
+          {
+            "name": "Amirhossein Mollaali"
+          },
+          {
+            "name": "Christian Moya"
+          },
+          {
+            "name": "Amanda A. Howard"
+          },
+          {
+            "name": "Alexander Heinlein"
+          },
+          {
+            "name": "Panos Stinis"
+          },
+          {
+            "name": "Guang Lin"
+          }
+        ],
+        "venue": "Machine Learning Science and Technology",
+        "year": 2026,
+        "citationcount": 2,
+        "url": "https://doi.org/10.1088/2632-2153/ae7495",
+        "source": "OpenAlex"
+      },
+      {
+        "corpusid": 901349398,
+        "title": "KAN-ODEs: Kolmogorov–Arnold network ordinary differential equations for learning dynamical systems and hidden physics",
+        "abstract": "",
+        "authors": [
+          {
+            "name": "Benjamin C. Koenig"
+          },
+          {
+            "name": "Suyong Kim"
+          },
+          {
+            "name": "Sili Deng"
+          }
+        ],
+        "venue": "Computer Methods in Applied Mechanics and Engineering",
+        "year": 2024,
+        "citationcount": 154,
+        "url": "https://doi.org/10.1016/j.cma.2024.117397",
+        "source": "OpenAlex"
+      },
+      {
+        "corpusid": 901295406,
+        "title": "Kolmogorov–Arnold graph neural networks for molecular property prediction",
+        "abstract": "Graph neural networks (GNNs) have shown remarkable success in molecular property prediction as key models in geometric deep learning. Meanwhile, Kolmogorov–Arnold networks (KANs) have emerged as powerful alternatives to multi-layer perceptrons, offering improved expressivity, parameter efficiency and interpretability. To combine the strengths of both frameworks, we propose Kolmogorov–Arnold GNNs (KA-GNNs), which integrate KAN modules into the three fundamental components of GNNs: node embedding, message passing and readout. We further introduce Fourier-series-based univariate functions within KAN to enhance function approximation and provide theoretical analysis to support their expressiveness. Two architectural variants, KA-graph convolutional networks and KA-augmented graph attention networks, are developed and evaluated across seven molecular benchmarks. Experimental results show that KA-GNNs consistently outperform conventional GNNs in terms of both prediction accuracy and computational efficiency. Moreover, our models exhibit improved interpretability by highlighting chemically meaningful substructures. These findings demonstrate that KA-GNNs offer a powerful and generalizable framework for molecular data modelling, drug discovery and beyond. Li et al. developed KA-GNNs, graph neural network architectures enhanced by Kolmogorov–Arnold networks, which improve accuracy and interpretability in molecular property prediction and extend geometric deep learning to scientific domains.",
+        "authors": [
+          {
+            "name": "Longlong Li"
+          },
+          {
+            "name": "Yipeng Zhang"
+          },
+          {
+            "name": "Guanghui Wang"
+          },
+          {
+            "name": "Kelin Xia"
+          }
+        ],
+        "venue": "Nature Machine Intelligence",
+        "year": 2025,
+        "citationcount": 84,
+        "url": "https://doi.org/10.1038/s42256-025-01087-7",
+        "source": "OpenAlex"
+      },
+      {
+        "corpusid": 901332813,
+        "title": "Adaptive Training of Grid-Dependent Physics-Informed Kolmogorov-Arnold Networks",
+        "abstract": "Physics-Informed Neural Networks (PINNs) have emerged as a robust framework for solving Partial Differential Equations (PDEs) by approximating their solutions via neural networks and imposing physics-based constraints on the loss function. Traditionally, Multilayer Perceptrons (MLPs) have been the neural network of choice, with significant progress made in optimizing their training. Recently, Kolmogorov-Arnold Networks (KANs) were introduced as a viable alternative, with the potential of offering better interpretability and efficiency while requiring fewer parameters. In this paper, we present a fast JAX-based implementation of grid-dependent Physics-Informed Kolmogorov-Arnold Networks (PIKANs) for solving PDEs, achieving up to 84 times faster training times than the original KAN implementation. We propose an adaptive training scheme for PIKANs, introducing an adaptive state transition technique to avoid loss function peaks between grid extensions, and a methodology for designing PIKANs with alternative basis functions. Through comparative experiments, we demonstrate that the adaptive features significantly enhance solution accuracy, decreasing the L2 error relative to the reference solution by up to 43.02%. For the studied forward PDE problems, our methodology approaches or surpasses the results obtained from architectures that utilize up to 8.5 times more parameters, highlighting the potential of adaptive, grid-dependent PIKANs as a superior alternative in scientific and engineering applications.",
+        "authors": [
+          {
+            "name": "Spyros Rigas"
+          },
+          {
+            "name": "Michalis Papachristou"
+          },
+          {
+            "name": "Theofilos Papadopoulos"
+          },
+          {
+            "name": "Fotios K. Anagnostopoulos"
+          },
+          {
+            "name": "Georgios Alexandridis"
+          }
+        ],
+        "venue": "IEEE Access",
+        "year": 2024,
+        "citationcount": 53,
+        "url": "https://doi.org/10.1109/access.2024.3504962",
+        "source": "OpenAlex"
+      }
+    ],
+    "num_candidates": 5,
+    "warning": "Chủ đề 'Kolmogorov-Arnold Networks KAN for Scientific Machine Learning' có dữ liệu liên quan một phần (25% từ khóa có trong corpus, top score: 112.2). Một số khía cạnh chuyên sâu có thể cần tra cứu thêm.",
+    "solutions": [
+      "Hệ thống sẽ kết hợp bài báo gần nhất với khả năng suy luận mở của Gemini để bổ sung khoảng trống kiến thức.",
+      "Có thể bổ sung thêm các bài báo chuyên sâu vào data/papers.jsonl để tăng độ chính xác."
+    ]
+  },
+  "template_suitability": {
+    "is_supported": true,
+    "confidence": 8,
+    "selected_template": "time_series_forecasting",
+    "reasoning": "Kolmogorov-Arnold Networks (KAN) là một kiến trúc mạng nơ-ron thay thế MLP, thường được ứng dụng mạnh mẽ trong Scientific Machine Learning (SciML), giải phương trình vi phân, và dự báo chuỗi thời gian / mô hình hóa hệ thống động lực.",
+    "suggestions": "Có thể tích hợp KAN vào mô hình chuỗi thời gian hoặc sử dụng cấu trúc ODE/PDE (như SEIR hoặc dự báo thời tiết/năng lượng) để kiểm chứng khả năng xấp xỉ hàm số vượt trội của KAN so với MLP."
+  },
+  "selected_template": "time_series_forecasting"
+}

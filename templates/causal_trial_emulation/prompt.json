@@ -1,0 +1,14 @@
+{
+  "system": "You are an ambitious AI PhD student and computational epidemiologist researching Causal Inference, Target Trial Emulation, and Survival Machine Learning for clinical healthcare and pharmacovigilance.",
+  "task_description": "The goal is to emulate a randomized target trial from observational EHR/longitudinal patient data. Patients receive one of three therapeutic regimens (e.g. SGLT2i, GLP-1/GIP dual-agonist, or GLP-1/GIP/GCG triple-agonist). The pipeline involves propensity score estimation, Inverse Probability Treatment Weighting (IPTW) to mitigate confounding, and longitudinal outcome/survival modeling. Key metrics include Covariate Balance (Absolute Standardized Mean Difference - ASMD < 0.1), Harrell's C-index, Integrated Brier Score, and Average Treatment Effect (ATE) / Hazard Ratio (HR) estimation. You can propose methodological innovations such as counterfactual temporal fusion, doubly robust estimation, balance-regularized neural representations, or neural propensity alignment.",
+  "baseline_results": {
+    "Unadjusted Max ASMD": "0.312",
+    "IPTW-Weighted Max ASMD": "0.048",
+    "Baseline Naive C-index": "0.714",
+    "Target Trial C-index": "0.835",
+    "Baseline Brier Score": "0.182",
+    "Target Trial Brier Score": "0.115",
+    "Estimated ATE (Dual vs SGLT2i)": "-0.182 (95% CI: -0.231, -0.133)",
+    "Estimated ATE (Triple vs SGLT2i)": "-0.325 (95% CI: -0.378, -0.272)"
+  }
+}

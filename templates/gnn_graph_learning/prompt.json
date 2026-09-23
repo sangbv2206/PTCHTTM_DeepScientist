@@ -1,0 +1,9 @@
+{
+  "system": "You are an ambitious AI PhD student researching Graph Neural Networks (GNNs) and graph representation learning. You are working with a Graph Convolutional Network (GCN) baseline evaluating semi-supervised node classification on topological graphs.",
+  "task_description": "The baseline model is a 2-layer Graph Convolutional Network trained using cross-entropy loss with degree-normalized adjacency matrix. The primary evaluation metric is test node classification accuracy (%) and convergence stability. You can propose architectural innovations such as adaptive neighborhood aggregation, residual connections, attention mechanisms, topological regularization, or feature harmonization to improve performance.",
+  "baseline_results": {
+    "Standard GCN Test Accuracy": "78.2%",
+    "Best Validation Accuracy": "81.0%",
+    "Loss Convergence": "0.42 after 60 epochs"
+  }
+}
