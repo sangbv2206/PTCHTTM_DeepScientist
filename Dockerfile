@@ -1,11 +1,11 @@
-# Su dung base image Python gon nhe co san Linux
+# Sử dụng base image Python gọn nhẹ có sẵn Linux
 FROM python:3.10-slim
 
-# Thiet lap bien moi truong khong tao file pyc va khong buffer output
+# Thiết lập biến môi trường để không tạo file .pyc và không buffer output
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
 
-# Cai dat pdflatex va cac goi tex phuc vu bien dich bai bao
+# Cài đặt pdflatex và các gói TeX phục vụ biên dịch bài báo
 RUN apt-get update && apt-get install -y --no-install-recommends \
     texlive-latex-base \
     texlive-latex-recommended \
@@ -18,13 +18,12 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     && rm -rf /var/lib/apt/lists/*
 
-# Thiet lap thu muc lam viec
+# Thiết lập thư mục làm việc
 WORKDIR /app
 
-# Sao chep va cai dat requirements
+# Sao chép và cài đặt các thư viện từ requirements.txt
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
-
 # Sao chep toan bo ma nguon vao container
 COPY . .
 
