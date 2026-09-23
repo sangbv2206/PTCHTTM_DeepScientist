@@ -18,50 +18,16 @@
 
 ## 2. Quy Trình Nghiên Cứu Khép Kín 7 Giai Đoạn
 
-Quy trình vận hành của DeepScientist được điều phối một cách chặt chẽ qua 7 giai đoạn:
+Kho Tri Thức Học Thuật (Knowledge Store & OpenAlex/arXiv)
 
+Giai đoạn 1: Xác định vấn đề nghiên cứu (Ideation Agent)
+Giai đoạn 2: Phản biện & thẩm định đề tài (Validator Agent)
+Giai đoạn 3: Phát triển phương pháp mới (Method Agent)
+Giai đoạn 4: Phản biện phương pháp & toán học (Validator Agent)
+Giai đoạn 5: Lập trình thực nghiệm, huấn luyện & trực quan hóa (Coder Agent)
+Giai đoạn 6: Soạn thảo toàn văn LaTeX & tự động biên dịch (LaTeX Writer Agent)
+Giai đoạn 7: Phản biện học thuật độc lập (Peer Reviewer)
 ```
-[Kho Tri Thức Học Thuật (Knowledge Store & OpenAlex/arXiv)]
-                           │
-                           ▼
-  ┌─────────────────────────────────────────────────────────────┐
-  │ Giai đoạn 1: Xác Định Vấn Đề Nghiên Cứu (Ideation Agent)    │
-  └──────────────────────────────┬──────────────────────────────┘
-                                 │
-                                 ▼
-  ┌─────────────────────────────────────────────────────────────┐
-  │ Giai đoạn 2: Phản Biện & Thẩm Định Đề Tài (Validator Agent) │
-  └──────────────────────────────┬──────────────────────────────┘
-                                 │
-                                 ▼
-  ┌─────────────────────────────────────────────────────────────┐
-  │ Giai đoạn 3: Phát Triển Phương Pháp Mới (Method Agent)      │
-  └──────────────────────────────┬──────────────────────────────┘
-                                 │
-                                 ▼
-  ┌─────────────────────────────────────────────────────────────┐
-  │ Giai đoạn 4: Phản Biện Phương Pháp & Toán Học (Validator)   │
-  └──────────────────────────────┬──────────────────────────────┘
-                                 │
-                                 ▼
-  ┌─────────────────────────────────────────────────────────────┐
-  │ Giai đoạn 5: Lập Trình Thực Nghiệm, Huấn Luyện & Vẽ Biểu Đồ │
-  │              (Coder Agent - PyTorch & Matplotlib Engine)     │
-  └──────────────────────────────┬──────────────────────────────┘
-                                 │
-                                 ▼
-  ┌─────────────────────────────────────────────────────────────┐
-  │ Giai đoạn 6: Soạn Thảo Toàn Văn LaTeX & Tự Động Biên Dịch   │
-  │              (LaTeX Writer Agent - pdflatex Compilation)     │
-  └──────────────────────────────┬──────────────────────────────┘
-                                 │
-                                 ▼
-  ┌─────────────────────────────────────────────────────────────┐
-  │ Giai đoạn 7: Phản Biện Học Thuật Độc Lập (Peer Reviewer)   │
-  │              (Conference Double-Blind Review - ICLR Format) │
-  └─────────────────────────────────────────────────────────────┘
-```
-
 ### Chi tiết các giai đoạn:
 - **Giai đoạn 1 (Problem Identification)**: Khai phá cơ sở tri thức cục bộ và tìm kiếm trực tuyến (OpenAlex, arXiv, Semantic Scholar) để tìm các bài báo hạt giống (seed papers), phân tích hạn chế của các phương pháp hiện tại và đề xuất vấn đề nghiên cứu mới.
 - **Giai đoạn 2 (Problem Validation)**: Hội đồng phản biện đánh giá vấn đề qua 5 tiêu chí: *Tính rõ ràng (Clarity)*, *Tính khả thi (Feasibility)*, *Tính mới (Novelty)*, *Tính phù hợp (Relevance)* và *Ý nghĩa thực tiễn (Significance)* qua nhiều vòng tranh biện.
