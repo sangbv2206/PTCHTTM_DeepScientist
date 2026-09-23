@@ -10,9 +10,9 @@ services:
     environment:
       - PYTHONUNBUFFERED=1
     volumes:
-      # Mount thu muc ket qua ra may host de truc tiep xem PDF va bieu do
+      # Mount thư mục kết quả ra máy host để trực tiếp xem PDF và biểu đồ
       - ./output:/app/output
-      # Mount tap du lieu tri thuc (neu co cap nhat hoac cache)
+      # Mount tập dữ liệu tri thức (nếu có cập nhật hoặc bộ nhớ đệm)
       - ./data:/app/data
-    # Mac dinh chay chu de tuy chon (co the ghi de bang tham so command)
+    # Mặc định chạy chủ đề tùy chọn (có thể ghi đè bằng tham số command)
     command: ["--topic", "Kolmogorov-Arnold Networks KAN for Scientific Machine Learning"]
