@@ -163,11 +163,8 @@ output/run_20260924_060712/
 
 Tạo tệp `.env` tại thư mục gốc của dự án:
 ```env
-GEMINI_API_KEY=AIzaSyYourGeminiApiKeyHere...
+GEMINI_API_KEY=.....
 ```
-
-> [!WARNING]
-> Không đưa tệp `.env` chứa API key lên Git. Tệp `.env` đã được cấu hình trong `.gitignore`.
 
 #### Bước 2: Xây dựng Docker Image
 Mở terminal tại thư mục dự án và chạy:
