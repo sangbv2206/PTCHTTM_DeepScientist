@@ -1,0 +1,225 @@
+{
+  "topic": "Causal Machine Learning and Target Trial Emulation for Cancer Survival Analysis",
+  "data_coverage": {
+    "status": "STRONG",
+    "coverage_score": 1.0,
+    "coverage_percent": 100.0,
+    "top_relevance_score": 154.2,
+    "matched_keywords": [
+      "causal",
+      "target",
+      "trial",
+      "emulation",
+      "cancer",
+      "survival"
+    ],
+    "missing_keywords": [],
+    "best_paper": {
+      "corpusid": 901395798,
+      "title": "Operational Survival Deficit of Neoadjuvant Chemotherapy in Early-Stage Breast Cancer: A Target Trial Emulation and Causal Machine Learning Study",
+      "abstract": "ABSTRACT Background Neoadjuvant chemotherapy (NAC) is the standard of care for locally advanced breast cancer. However, the disconnect between efficacy in randomized trials and effectiveness in real-world practice—attributable to real-world treatment delays and adherence barriers—remains underexplored for early-stage (cT1-cT3) operable disease. Methods We applied the Target Trial Emulation (TTE) framework to a propensity-score matched cohort from the SEER database. To mitigate immortal time bias and staging migration, we reconstructed clinical baselines. Individualized Treatment Effects (ITE) were estimated using a Double-Robust Causal Forest algorithm. To rigorously cross-validate these estimates against model misspecification, we employed a DeepCox neural network as a non-linear sensitivity analysis tool, exposing complex risk structures (e.g., U-shaped hazards) that traditional linear assumptions might overlook. Results In the matched cohort (N=26,946), Standard NAC was associated with an operational survival deficit (Absolute Risk Difference: 3.6%) compared to upfront surgery, corresponding to a hazard ratio of 1.32 (95% CI, 1.24–1.40; p < 0.001). Causal Forest analysis revealed a critical “Response-Survival Discordance”: while young TNBC patients exhibited high nodal pathologic complete response (npCR) rates, they paradoxically faced the worst survival outcomes (Standard Cox HR 1.87). Even in the 6-month landmark analysis to account for immortal time bias, this survival detriment persisted (Landmark HR 1.39; 95% CI, 1.06–1.81; p = 0.016; Figure 3D). Crucially, node-positive (cN+) patients—traditionally considered ideal candidates for systemic downstaging—experienced a significant survival detriment with NAC (HR 1.39). This disadvantage was most pronounced in Luminal A subtype and Invasive Lobular Carcinoma (ILC), where NAC failed to provide effective source control. In contrast, HER2-positive status exhibited a trend towards survival benefit, diverging from the significant risks observed in other subtypes. Anatomically, while cT2 tumors identified a “window of minimal operational deficit” where the absolute risk difference was negligible, operational risk paradoxically resurged in cT3 tumors, challenging the conventional paradigm that larger burdens inherently mandate downstaging. Conclusion Our causal analysis reveals a critical disconnect between biological risk and therapeutic efficacy. While SHAP modeling identified node-positive (cN+) status as a high-priority indicator for systemic therapy, the low real-world response rate (npCR 15.0%) rendered historical standard NAC regimens insufficient to counterbalance the risks of surgical delay (HR 1.39). Our findings indicate that without therapeutic escalation (e.g., immunotherapy) to ensure high pathologic response rates, the operational risks of deferring surgery may outweigh the benefits of downstaging in this subgroup. Our findings highlight a critical “Implementation Gap” where standard NAC regimens yield suboptimal real-world outcomes for high-risk subgroups. Our findings suggest that clinical prioritization should diverge based on subtype biology: for chemo-refractory subtypes (e.g., Luminal A, ILC), Upfront Surgery ensures immediate source control and should be prioritized; conversely, for high-risk TNBC, standard NAC is insufficient, warranting Therapeutic Escalation (e.g., immunotherapy) to minimize the risk of non-response.",
+      "authors": [
+        {
+          "name": "Shihao Guan"
+        },
+        {
+          "name": "Yangyang Jian"
+        },
+        {
+          "name": "Wanying Dong"
+        },
+        {
+          "name": "Liangpeng Dong"
+        }
+      ],
+      "venue": "medRxiv",
+      "year": 2025,
+      "citationcount": 0,
+      "url": "https://doi.org/10.64898/2025.12.22.25342768",
+      "source": "OpenAlex"
+    },
+    "candidate_papers": [
+      {
+        "corpusid": 901395798,
+        "title": "Operational Survival Deficit of Neoadjuvant Chemotherapy in Early-Stage Breast Cancer: A Target Trial Emulation and Causal Machine Learning Study",
+        "abstract": "ABSTRACT Background Neoadjuvant chemotherapy (NAC) is the standard of care for locally advanced breast cancer. However, the disconnect between efficacy in randomized trials and effectiveness in real-world practice—attributable to real-world treatment delays and adherence barriers—remains underexplored for early-stage (cT1-cT3) operable disease. Methods We applied the Target Trial Emulation (TTE) framework to a propensity-score matched cohort from the SEER database. To mitigate immortal time bias and staging migration, we reconstructed clinical baselines. Individualized Treatment Effects (ITE) were estimated using a Double-Robust Causal Forest algorithm. To rigorously cross-validate these estimates against model misspecification, we employed a DeepCox neural network as a non-linear sensitivity analysis tool, exposing complex risk structures (e.g., U-shaped hazards) that traditional linear assumptions might overlook. Results In the matched cohort (N=26,946), Standard NAC was associated with an operational survival deficit (Absolute Risk Difference: 3.6%) compared to upfront surgery, corresponding to a hazard ratio of 1.32 (95% CI, 1.24–1.40; p < 0.001). Causal Forest analysis revealed a critical “Response-Survival Discordance”: while young TNBC patients exhibited high nodal pathologic complete response (npCR) rates, they paradoxically faced the worst survival outcomes (Standard Cox HR 1.87). Even in the 6-month landmark analysis to account for immortal time bias, this survival detriment persisted (Landmark HR 1.39; 95% CI, 1.06–1.81; p = 0.016; Figure 3D). Crucially, node-positive (cN+) patients—traditionally considered ideal candidates for systemic downstaging—experienced a significant survival detriment with NAC (HR 1.39). This disadvantage was most pronounced in Luminal A subtype and Invasive Lobular Carcinoma (ILC), where NAC failed to provide effective source control. In contrast, HER2-positive status exhibited a trend towards survival benefit, diverging from the significant risks observed in other subtypes. Anatomically, while cT2 tumors identified a “window of minimal operational deficit” where the absolute risk difference was negligible, operational risk paradoxically resurged in cT3 tumors, challenging the conventional paradigm that larger burdens inherently mandate downstaging. Conclusion Our causal analysis reveals a critical disconnect between biological risk and therapeutic efficacy. While SHAP modeling identified node-positive (cN+) status as a high-priority indicator for systemic therapy, the low real-world response rate (npCR 15.0%) rendered historical standard NAC regimens insufficient to counterbalance the risks of surgical delay (HR 1.39). Our findings indicate that without therapeutic escalation (e.g., immunotherapy) to ensure high pathologic response rates, the operational risks of deferring surgery may outweigh the benefits of downstaging in this subgroup. Our findings highlight a critical “Implementation Gap” where standard NAC regimens yield suboptimal real-world outcomes for high-risk subgroups. Our findings suggest that clinical prioritization should diverge based on subtype biology: for chemo-refractory subtypes (e.g., Luminal A, ILC), Upfront Surgery ensures immediate source control and should be prioritized; conversely, for high-risk TNBC, standard NAC is insufficient, warranting Therapeutic Escalation (e.g., immunotherapy) to minimize the risk of non-response.",
+        "authors": [
+          {
+            "name": "Shihao Guan"
+          },
+          {
+            "name": "Yangyang Jian"
+          },
+          {
+            "name": "Wanying Dong"
+          },
+          {
+            "name": "Liangpeng Dong"
+          }
+        ],
+        "venue": "medRxiv",
+        "year": 2025,
+        "citationcount": 0,
+        "url": "https://doi.org/10.64898/2025.12.22.25342768",
+        "source": "OpenAlex"
+      },
+      {
+        "corpusid": 901009162,
+        "title": "Comparative effectiveness of CDK4/6 inhibitors in metastatic breast cancer: using the target trial emulation framework to investigate overall survival in routine care",
+        "abstract": "PURPOSE: Cyclin-dependent kinase 4/6 inhibitor (CDK4/6i) plus aromatase inhibitor (AI) is the recommended first-line treatment for hormone receptor-positive/human epidermal growth factor receptor 2-negative metastatic breast cancer (mBC). CDK4/6i head-to-head trials have not been conducted, and randomized controlled trials (RCTs) report inconsistent overall survival (OS) results despite similar effects on the primary endpoint of progression-free survival. Real-world evidence can complement RCTs but selection biases and confounders can challenge interpretation. Target trial emulation applies the principles of RCTs to observational data to overcome such challenges. We emulated a hypothetical target trial to investigate whether causal differences in OS between patients receiving first-line CDK4/6i plus AI exist in the real-world clinical setting. METHODS: We used de-identified data (Flatiron Health mBC Enhanced Data Mart) from patients ≥ 18 years old at primary diagnosis who were treated with first-line palbociclib/ribociclib/abemaciclib plus AI for mBC between 2018 and 2024. Statistical adjustments included stabilized inverse-probability weighting (sIPTW), investigation of missing data mechanisms, and analyses for unmeasured confounders. RESULTS: 2626 patients were included (palbociclib n = 1686; ribociclib n = 537; abemaciclib n = 403). After sIPTW, baseline characteristics were balanced between groups and there was no observable difference in real-world OS (ribociclib vs palbociclib, adjusted hazard ratio 1.00, 95% CI: 0.81-1.24; abemaciclib v palbociclib: 0.91, 95% CI: 0.74-1.14). Results were consistent after sensitivity analyses. CONCLUSION: Using target trial emulation, real-world OS is similar with palbociclib/ribociclib/abemaciclib plus AI. These findings may contribute to the development of combination strategies to improve clinical outcomes and to guide clinical decision-making.",
+        "authors": [
+          {
+            "name": "Adam Brufsky"
+          },
+          {
+            "name": "Richard S. Finn"
+          },
+          {
+            "name": "Otto Metzger"
+          },
+          {
+            "name": "Rodrigo Goncalves"
+          },
+          {
+            "name": "Cynthia Huang Bartlett"
+          },
+          {
+            "name": "Sameet Sreenivasan"
+          },
+          {
+            "name": "Ula Nur"
+          },
+          {
+            "name": "Jessica Davies"
+          },
+          {
+            "name": "A A Grigorenko"
+          },
+          {
+            "name": "Gráinne H. Long"
+          }
+        ],
+        "venue": "Breast Cancer Research and Treatment",
+        "year": 2026,
+        "citationcount": 1,
+        "url": "https://doi.org/10.1007/s10549-026-07935-3",
+        "source": "OpenAlex"
+      },
+      {
+        "corpusid": 901512929,
+        "title": "Causal AI for cancer immunotherapy: a narrative framework review of target trial emulation, treatment-effect learning and clinical translation",
+        "abstract": "This narrative framework Review examines how artificial intelligence (AI) can move cancer immunotherapy research from outcome prediction toward target-trial-based treatment-effect learning. AI has produced increasingly accurate models for predicting response, survival and immune-related toxicity during cancer immunotherapy. Yet most models estimate outcome risk under observed care rather than the causal effect of choosing one strategy over another. We therefore frame immunotherapy AI as a causal digital-medicine problem: clinically useful AI should begin with a target-trial question that specifies eligibility, time zero, treatment strategies, comparators, outcomes, estimands and bias-control plans before model development. Within this framework, multimodal AI outputs from imaging, digital pathology, omics, microbiome data, electronic health records and clinical text can function as baseline confounders, candidate effect modifiers, longitudinal state variables or outcome-ascertainment tools. We distinguish established causal-inference approaches, such as target trial emulation, propensity-score weighting, g-methods, TMLE, DML and heterogeneous-treatment-effect estimation, from exploratory technologies such as reinforcement learning and digital twins that require prospective safety validation. We close by outlining validation, reporting, workflow, regulatory and lifecycle-monitoring requirements for moving from predictive biomarkers to trustworthy causal learning systems in immuno-oncology.",
+        "authors": [
+          {
+            "name": "Xin Zhao"
+          },
+          {
+            "name": "Zhuoran Liu"
+          },
+          {
+            "name": "Jie Yang"
+          },
+          {
+            "name": "Qingyun Xie"
+          },
+          {
+            "name": "Tianyang Mao"
+          },
+          {
+            "name": "Zhou Heng"
+          },
+          {
+            "name": "Hongyuan Wang"
+          },
+          {
+            "name": "Peng Zheng"
+          },
+          {
+            "name": "Kangyi Jiang"
+          },
+          {
+            "name": "Fengwei Gao"
+          }
+        ],
+        "venue": "Frontiers in Immunology",
+        "year": 2026,
+        "citationcount": 0,
+        "url": "https://doi.org/10.3389/fimmu.2026.1896755",
+        "source": "OpenAlex"
+      },
+      {
+        "corpusid": 901619665,
+        "title": "Missingness in Eligibility Criteria for Target Trial Emulation in EHR With Survival Outcomes",
+        "abstract": "In certain settings, when conducting a randomized trial would be infeasible, electronic health records (EHR) can be used to emulate a target trial and estimate causal effects of an intervention. This process involves specifying the elements of a hypothetical trial protocol and applying these to the design of an observational study conducted with EHR data (or other observational data source). One element of target trial specification includes defining eligibility criteria. However, defining the eligible population with EHR can be complicated by missingness in eligibility-defining variables. Multiple imputation (MI) is one common approach to missingness in EHR data, but it is unclear whether imputation of eligibility criteria should occur before or after excluding ineligible individuals. Motivated by a target trial emulation of two treatments for advanced breast cancer, we explore this question when estimating the average causal effect under a target trial framework with survival outcomes. We illustrate how alternative MI strategies perform using simulated data and in a real-world analysis of oncology EHR data. We found that in most settings with high proportions of missingness in eligibility-defining variables, imputing missing data using a flexible imputation model, such as a random forest, prior to excluding ineligible individuals resulted in lower bias than complete case analysis or imputation after excluding ineligible individuals. Choices about how to handle practical challenges such as this in the application of target trial emulation to messy, real-world data sources can have substantial effects on causal parameter estimation and should be carefully considered to ensure that the results of observational studies are as rigorous as possible.",
+        "authors": [
+          {
+            "name": "Jenny I. Shen"
+          },
+          {
+            "name": "Kristin A. Linn"
+          },
+          {
+            "name": "Amy Sanders Clark"
+          },
+          {
+            "name": "Ronac Mamtani"
+          },
+          {
+            "name": "Rebecca A. Hubbard"
+          }
+        ],
+        "venue": "Statistics in Medicine",
+        "year": 2026,
+        "citationcount": 0,
+        "url": "https://doi.org/10.1002/sim.70500",
+        "source": "OpenAlex"
+      },
+      {
+        "corpusid": 901520858,
+        "title": "Target Trial Emulation: A Design Tool for Cancer Clinical Trials",
+        "abstract": "PURPOSE: To apply target trial emulation to explore the potential impact of eligibility criteria on the primary outcome of a randomized controlled trial. METHODS: Simulations of a real-world explanatory trial of transarterial radioembolization for advanced unresectable hepatocellular carcinoma with portal vein invasion were performed to examine the effects of cohort specification on survival outcomes and patient sample size. Simulations comprised 24 different permutations of the trial varied on three disease nonspecific eligibility parameters. Treatment and control arms for these emulated trials were drawn from the National Cancer Database and matched by treatment propensity. Target trial emulation served as the causal framework for this analysis, allowing the architecture of a true controlled experiment to address forms of bias routinely encountered in comparative effectiveness studies involving real-world observational data. RESULTS: Twenty-four propensity score-matched cohorts comprising a wider clinical spectrum of patients than specified by the original target trial were successfully generated using the National Cancer Database. The arms for each of the emulated trials demonstrated exchangeability across all eligibility criteria and other clinical covariates. Significant treatment benefits were associated with only a narrow range of eligibility criteria, indicating that the original target trial was well specified. CONCLUSION: The impact of patient selection on treatment outcomes can be studied using target trial emulation. This analytical framework can furthermore serve to leverage existing real-world data to inform the task of cohort specification for a randomized controlled trial, facilitating a more data-driven approach for this important step in clinical trial design.",
+        "authors": [
+          {
+            "name": "Sandi Alexander Kwee"
+          },
+          {
+            "name": "Linda L. Wong"
+          },
+          {
+            "name": "Christina Ludema"
+          },
+          {
+            "name": "Chris K. Deng"
+          },
+          {
+            "name": "Deborah Ann Taira"
+          },
+          {
+            "name": "Todd B. Seto"
+          },
+          {
+            "name": "Douglas P. Landsittel"
+          }
+        ],
+        "venue": "JCO Clinical Cancer Informatics",
+        "year": 2023,
+        "citationcount": 18,
+        "url": "https://doi.org/10.1200/cci.22.00140",
+        "source": "OpenAlex"
+      }
+    ],
+    "num_candidates": 5,
+    "warning": null,
+    "solutions": [
+      "Cơ sở dữ liệu hỗ trợ tốt, có đầy đủ tài liệu nền tảng để trích dẫn và đối sánh."
+    ]
+  },
+  "template_suitability": {
+    "is_supported": true,
+    "confidence": 10,
+    "selected_template": "causal_trial_emulation",
+    "reasoning": "Đề tài kết hợp suy luận nhân quả (Causal Machine Learning) và giả lập thử nghiệm lâm sàng (Target Trial Emulation) trong phân tích sống còn ung thư (cancer survival analysis). Template 'causal_trial_emulation' được thiết kế đặc biệt cho các bài toán ước lượng hiệu quả điều trị, mô hình survival/hazard, trọng số IPTW và kiểm định cân bằng covariate trong dịch tễ học lâm sàng.",
+    "suggestions": "Sử dụng các mô hình học máy nhân quả dựa trên mạng nơ-ron (như Causal Forests, Cox-Time, hoặc Survival Net) tích hợp với thuật toán IPTW để xử lý hiện tượng censored data (dữ liệu bị kiểm duyệt) và đánh giá độ đo trọng số sai số (ASMD) trước và sau khi cân bằng."
+  },
+  "selected_template": "causal_trial_emulation"
+}

@@ -209,6 +209,7 @@ class ClaimLedger:
         is_wide = len(all_metrics_keys) >= 3
         tbl_env = "table*" if is_wide else "table"
         tbl_pos = "[t]" if is_wide else "[htbp]"
+        target_width = r"\textwidth" if is_wide else r"\columnwidth"
         latex = [
             f"\\begin{{{tbl_env}}}{tbl_pos}",
             "\\centering",
@@ -216,7 +217,7 @@ class ClaimLedger:
             "\\vspace{0.3em}",
             "\\label{tab:empirical_results}",
             "\\small",
-            f"\\resizebox{{{('\\textwidth' if is_wide else '\\columnwidth')}}}{{!}}{{",
+            f"\\resizebox{{{target_width}}}{{!}}{{",
             f"\\begin{{tabular}}{{{col_spec}}}",
             "\\toprule",
             "\\textbf{Method / Architecture} & " + " & ".join(f"\\textbf{{{format_col_header(k)}}}" for k in all_metrics_keys) + " \\\\",
@@ -259,22 +260,46 @@ class ClaimLedger:
         return "\n".join(latex)
 
     def render_claim_ledger_markdown(self) -> str:
-        """Sinh tài liệu Markdown báo cáo kiểm chứng cho Bundle (Điều #1, #4, #15)."""
+        """Sinh tài liệu Markdown báo cáo kiểm chứng cho Bundle (Điều #1, #4, #15) kèm chỉ dẫn cực tính trung thực."""
         lines = [
             "# Bảng Kiểm Chứng Tuyên Bố Thực Nghiệm (Claim Ledger)",
             "",
             "Tất cả các con số xuất hiện trong bài báo được trích xuất trực tiếp từ các khoản mục dưới đây:",
             "",
-            "| ID | Chỉ số / Metric | Mô hình đề xuất | Giá trị đo được | Baseline so sánh | Chênh lệch (Delta) | Cải thiện (%) | Chiều tốt |",
-            "|---|---|---|---|---|---|---|---|"
+            "| ID | Chỉ số / Metric | Mô hình đề xuất | Giá trị đo được | Baseline so sánh | Chênh lệch (Delta) | Thay đổi (%) | Chiều tốt | Đánh giá |",
+            "|---|---|---|---|---|---|---|---|---|"
         ]
+        directives = []
         for cid, c in self.claims.items():
             b_str = f"{c.baseline_name} ({c.baseline_mean})" if c.baseline_name else "--"
             delta_str = f"{c.delta:+.4f}" if c.baseline_name else "--"
             rel_str = f"{c.rel_improvement_pct:+.1f}%" if c.baseline_name else "--"
             dir_str = "Cao hơn tốt hơn" if c.direction == "higher_is_better" else "Thấp hơn tốt hơn"
             std_str = f" ± {c.method_std:.4f}" if c.method_std > 0 else ""
+
+            eval_str = "Độc lập"
+            if c.baseline_name:
+                is_better = (c.delta > 0) if c.direction == "higher_is_better" else (c.delta < 0)
+                if abs(c.delta) < 1e-6:
+                    eval_str = "Tương đương (0.0%)"
+                elif is_better:
+                    eval_str = "TỐT HƠN"
+                    directives.append(f"- **{c.metric_key}**: Proposed ({c.method_mean}) cải thiện so với baseline ({c.baseline_mean}) thêm {abs(c.rel_improvement_pct):.1f}%. Cho phép dùng từ 'improves' hoặc 'superior'.")
+                else:
+                    eval_str = "KÉM HƠN (DEGRADED)"
+                    directives.append(f"- **{c.metric_key}**: Proposed ({c.method_mean}) KÉM HƠN baseline ({c.baseline_mean}) chênh lệch {abs(c.rel_improvement_pct):.1f}%. BẮT BUỘC PHẢI THỪA NHẬN TRUNG THỰC: Đây là sự suy giảm / đánh đổi phương pháp luận (performance decline / trade-off). CẤM TUYỆT ĐỐI dùng từ 'outperform', 'superior', 'effectively handles', 'robust' cho chỉ số này!")
+
             lines.append(
-                f"| **{cid}** | `{c.metric_key}` | {c.method_name} | {c.method_mean}{std_str} | {b_str} | {delta_str} | {rel_str} | {dir_str} |"
+                f"| **{cid}** | `{c.metric_key}` | {c.method_name} | {c.method_mean}{std_str} | {b_str} | {delta_str} | {rel_str} | {dir_str} | **{eval_str}** |"
             )
+
+        if directives:
+            lines.extend([
+                "",
+                "### CHỈ DẪN TRUNG THỰC BẮT BUỘC CHO NGÔN NGỮ BÀI BÁO (ZERO-SPIN DIRECTIVES):",
+                "Khi viết văn xuôi (Abstract, Introduction, Experiments, Conclusion), bạn PHẢI tuân thủ các quy tắc cực tính sau:",
+                *directives,
+                "- **Tham số giả lập**: Nếu có chỉ số Relative Risk hoặc Hazard Ratio ground-truth cố định, phải nêu rõ đây là giá trị chuẩn của mô phỏng (benchmark simulation ground truth), KHÔNG ĐƯỢC viết như thể đây là số đo do mô hình ước lượng được."
+            ])
+
         return "\n".join(lines)

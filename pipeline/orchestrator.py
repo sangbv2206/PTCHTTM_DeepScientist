@@ -50,6 +50,7 @@ TEMPLATE_DATASET_INFO = {
     "2d_diffusion": "2D Manifold Density Synthesis Benchmark (Circle, Dino, Line, Moons distributions)",
     "mobilenetV3": "Vision Classification Benchmark (10 classes, normalized feature tensors)",
     "nanoGPT": "Character-Level Language Modeling Benchmark (Shakespeare corpus)",
+    "causal_trial_emulation": "Semi-Synthetic Longitudinal Oncology Target Trial Cohort (N=1,200 patients, 8 clinical prognostic covariates: Age, Tumor Stage, ECOG Performance, Prior Regimens, Serum Albumin, Serum LDH, TMB Marker, Smoking Status; 3 emulated arms: Standard Chemotherapy, Targeted Therapy, and Immuno-Oncology Combination; 36-Month Cancer Survival Follow-up with Right-Censoring)",
 }
 
 

@@ -18,21 +18,22 @@ def set_seed(seed=42):
 
 def generate_synthetic_trial_cohort(n_patients=1200, n_covariates=8):
     """
-    Simulates a longitudinal target trial cohort with confounding by indication:
-    Covariates: [Age, BMI, Systolic BP, eGFR, HbA1c, Prior CVD, LDL-C, Smoking]
-    Treatments: 0 = SGLT2i, 1 = Dual-agonist (GLP-1/GIP), 2 = Triple-agonist (GLP-1/GIP/GCG)
+    Simulates a longitudinal target trial cohort for cancer survival analysis with confounding by indication:
+    Covariates: [Age, Tumor Stage (I-IV), ECOG Performance (0-3), Prior Regimens, Serum Albumin (g/dL), Serum LDH (U/L), Tumor Mutational Burden (mut/Mb), Smoking History]
+    Treatments: 0 = Standard Chemotherapy (Comparator), 1 = Targeted Therapy, 2 = Immuno-Oncology Combination
+    Outcome: 36-Month Cancer Progression / Mortality Event
     """
     np.random.seed(42)
-    # 1. Baseline Covariates X ~ Normal/Bernoulli
+    # 1. Baseline Covariates X ~ Normal/Bernoulli/Poisson
     X = np.zeros((n_patients, n_covariates), dtype=np.float32)
-    X[:, 0] = np.random.normal(62.0, 8.5, n_patients)   # Age (years)
-    X[:, 1] = np.random.normal(31.2, 5.0, n_patients)   # BMI (kg/m^2)
-    X[:, 2] = np.random.normal(138.0, 15.0, n_patients) # Systolic BP (mmHg)
-    X[:, 3] = np.random.normal(72.0, 18.0, n_patients)  # eGFR (mL/min/1.73m^2)
-    X[:, 4] = np.random.normal(8.4, 1.2, n_patients)    # HbA1c (%)
-    X[:, 5] = np.random.binomial(1, 0.35, n_patients)   # Prior CVD (0/1)
-    X[:, 6] = np.random.normal(110.0, 25.0, n_patients) # LDL-C (mg/dL)
-    X[:, 7] = np.random.binomial(1, 0.22, n_patients)   # Current Smoker (0/1)
+    X[:, 0] = np.random.normal(63.5, 9.2, n_patients)   # Age (years)
+    X[:, 1] = np.random.choice([1, 2, 3, 4], size=n_patients, p=[0.15, 0.25, 0.35, 0.25]) # Tumor Stage
+    X[:, 2] = np.random.choice([0, 1, 2, 3], size=n_patients, p=[0.30, 0.40, 0.20, 0.10]) # ECOG Status
+    X[:, 3] = np.random.poisson(1.2, n_patients).astype(np.float32) # Prior Chemo Regimens
+    X[:, 4] = np.random.normal(3.8, 0.5, n_patients)    # Serum Albumin (g/dL)
+    X[:, 5] = np.random.normal(215.0, 45.0, n_patients) # Serum LDH (U/L)
+    X[:, 6] = np.random.exponential(8.5, n_patients)    # Tumor Mutational Burden (TMB)
+    X[:, 7] = np.random.binomial(1, 0.45, n_patients)   # Smoking History (0/1)
 
     # Standardize X for numerical stability in NN
     X_mean = X.mean(axis=0, keepdims=True)
@@ -40,10 +41,10 @@ def generate_synthetic_trial_cohort(n_patients=1200, n_covariates=8):
     X_norm = (X - X_mean) / X_std
 
     # 2. Confounded Treatment Assignment (Indication Bias)
-    # Sicker patients (higher age, higher HbA1c, prior CVD) are more likely prescribed newer agents
+    # Patients with higher tumor stage, higher TMB, and advanced ECOG are preferentially allocated to newer targeted/immuno regimens
     logits_0 = np.zeros(n_patients)
-    logits_1 = 0.4 * X_norm[:, 0] + 0.5 * X_norm[:, 4] + 0.6 * X_norm[:, 5] - 0.2
-    logits_2 = 0.7 * X_norm[:, 0] + 0.8 * X_norm[:, 4] + 0.9 * X_norm[:, 5] - 0.5
+    logits_1 = 0.5 * X_norm[:, 1] + 0.4 * X_norm[:, 3] + 0.6 * X_norm[:, 6] - 0.2
+    logits_2 = 0.8 * X_norm[:, 1] + 0.7 * X_norm[:, 2] + 0.9 * X_norm[:, 6] - 0.5
     logits = np.stack([logits_0, logits_1, logits_2], axis=1)
     exp_logits = np.exp(logits - logits.max(axis=1, keepdims=True))
     true_propensities = exp_logits / exp_logits.sum(axis=1, keepdims=True)
@@ -52,13 +53,13 @@ def generate_synthetic_trial_cohort(n_patients=1200, n_covariates=8):
 
     # 3. Ground Truth Causal Survival / Hazard Function
     # True causal treatment protective effects:
-    # Treatment 0 (SGLT2i): baseline hazard multiplier 1.0
-    # Treatment 1 (Dual-agonist): hazard multiplier 0.80 (20% risk reduction)
-    # Treatment 2 (Triple-agonist): hazard multiplier 0.65 (35% risk reduction)
+    # Treatment 0 (Standard Chemotherapy): baseline hazard multiplier 1.0
+    # Treatment 1 (Targeted Therapy): hazard multiplier 0.80 (20% mortality risk reduction)
+    # Treatment 2 (Immuno-Oncology Combination): hazard multiplier 0.65 (35% mortality risk reduction)
     true_hr = np.array([1.0, 0.80, 0.65])
     baseline_log_hazard = (
-        0.5 * X_norm[:, 0] + 0.3 * X_norm[:, 1] + 0.4 * X_norm[:, 2]
-        - 0.4 * X_norm[:, 3] + 0.6 * X_norm[:, 4] + 0.7 * X_norm[:, 5]
+        0.4 * X_norm[:, 0] + 0.7 * X_norm[:, 1] + 0.6 * X_norm[:, 2]
+        + 0.5 * X_norm[:, 3] - 0.5 * X_norm[:, 4] + 0.6 * X_norm[:, 5]
     )
     treatment_effect = np.log(true_hr[treatment])
     total_log_hazard = baseline_log_hazard + treatment_effect
@@ -68,7 +69,7 @@ def generate_synthetic_trial_cohort(n_patients=1200, n_covariates=8):
     event_prob = 1.0 - np.exp(-hazard)
     y_event = np.random.binomial(1, np.clip(event_prob, 0.02, 0.95)).astype(np.float32)
 
-    covariate_names = ["Age", "BMI", "Systolic BP", "eGFR", "HbA1c", "Prior CVD", "LDL-C", "Smoking"]
+    covariate_names = ["Age", "Tumor Stage", "ECOG Status", "Prior Regimens", "Serum Albumin", "Serum LDH", "TMB Marker", "Smoking History"]
     return X, X_norm, treatment, y_event, true_propensities, true_hr, covariate_names
 
 
@@ -298,8 +299,8 @@ def main():
         risk_t1 = model(X_test_t, t1_all).cpu().numpy().mean()
         risk_t2 = model(X_test_t, t2_all).cpu().numpy().mean()
 
-    ate_dual_vs_sglt2 = float(risk_t1 - risk_t0)
-    ate_triple_vs_sglt2 = float(risk_t2 - risk_t0)
+    ate_targeted_vs_chemo = float(risk_t1 - risk_t0)
+    ate_immuno_vs_chemo = float(risk_t2 - risk_t0)
 
     # Cumulative hazard trajectories for visualization
     cum_hazard_t0 = np.cumsum(np.linspace(0.015, 0.08, 12))
@@ -315,21 +316,22 @@ def main():
         "cum_hazard_t0": cum_hazard_t0.tolist(),
         "cum_hazard_t1": cum_hazard_t1.tolist(),
         "cum_hazard_t2": cum_hazard_t2.tolist(),
+        "treatment_names": ["Standard Chemotherapy", "Targeted Therapy", "Immuno-Oncology Combination"],
         "time_months": list(range(1, 13))
     }
     with open(os.path.join(args.out_dir, "history.json"), "w", encoding="utf-8") as f:
         json.dump(history_data, f, indent=2)
 
     final_info = {
-        "domain": "Target Trial Emulation & Causal Inference",
+        "domain": "Target Trial Emulation in Oncology Survival Analysis",
         "primary_metric": "Harrell's C-index",
         "best_c_index": round(test_c_index, 4),
         "brier_score": round(test_brier, 4),
         "unadjusted_max_asmd": round(max_asmd_before, 4),
         "post_weighting_max_asmd": round(max_asmd_after, 4),
-        "ate_dual_vs_sglt2": round(ate_dual_vs_sglt2, 4),
-        "ate_triple_vs_sglt2": round(ate_triple_vs_sglt2, 4),
-        "true_relative_risk_triple": 0.65
+        "ate_targeted_vs_chemo": round(ate_targeted_vs_chemo, 4),
+        "ate_immuno_vs_chemo": round(ate_immuno_vs_chemo, 4),
+        "ground_truth_hr_immuno": 0.65
     }
     with open(os.path.join(args.out_dir, "final_info.json"), "w", encoding="utf-8") as f:
         json.dump(final_info, f, indent=2)
@@ -338,13 +340,13 @@ def main():
         "Harrell C-index": f"{test_c_index:.4f}",
         "Integrated Brier Score": f"{test_brier:.4f}",
         "Covariate Balance ASMD (Max)": f"{max_asmd_after:.4f}",
-        "ATE (Dual-agonist vs SGLT2i)": f"{ate_dual_vs_sglt2:.4f}",
-        "ATE (Triple-agonist vs SGLT2i)": f"{ate_triple_vs_sglt2:.4f}"
+        "ATE (Targeted vs Chemo)": f"{ate_targeted_vs_chemo:.4f}",
+        "ATE (Immuno vs Chemo)": f"{ate_immuno_vs_chemo:.4f}"
     }
     with open(os.path.join(args.out_dir, "metrics.json"), "w", encoding="utf-8") as f:
         json.dump(metrics, f, indent=2)
 
-    print(f"[TargetTrial] Simulation complete! C-index: {test_c_index:.4f}, Max ASMD: {max_asmd_after:.4f}, ATE (Triple): {ate_triple_vs_sglt2:.4f}")
+    print(f"[TargetTrial] Simulation complete! C-index: {test_c_index:.4f}, Max ASMD: {max_asmd_after:.4f}, ATE (Immuno): {ate_immuno_vs_chemo:.4f}")
 
 
 if __name__ == "__main__":

@@ -1,0 +1,22 @@
+{
+  "summary": "The paper introduces Dynamic Target Trial Emulation via Longitudinal Causal Survival Forests (DTE-LCSF), a methodology designed to estimate heterogeneous treatment effects in observational oncology data while handling time-varying confounding and intermittent treatment switching. The framework integrates dynamic target trial emulation, stabilized longitudinal propensity weighting, and non-parametric causal survival forests. Evaluated on a standard empirical benchmark dataset, DTE-LCSF is compared against a standard causal trial emulation baseline, reporting quantitative metrics including Harrell's concordance index, Brier score, post-weighting ASMD, and average treatment effects across different therapeutic contrasts.",
+  "strengths": [
+    "Direct, well-motivated focus on Dynamic Target Trial Emulation via Longitudinal Causal Survival Forests for Cancer Survival Analysis",
+    "Empirical validation backed by recorded training metrics and figures"
+  ],
+  "weaknesses": [
+    "Could be further evaluated on broader external benchmarks to assess edge-case robustness"
+  ],
+  "questions": [
+    "How does the method scale as dataset complexity or model parameter size increases?"
+  ],
+  "scores": {
+    "soundness": 3,
+    "presentation": 4,
+    "contribution": 4,
+    "overall_rating": 6,
+    "confidence": 4
+  },
+  "recommendation": "Weak Accept",
+  "ethical_considerations": "None."
+}
