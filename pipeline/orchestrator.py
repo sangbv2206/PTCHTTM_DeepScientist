@@ -386,28 +386,49 @@ class DeepScientistPipeline:
             with open(upgraded_script_path, "w", encoding="utf-8") as f:
                 f.write(upgraded_code)
 
-            # 5.3. Chạy Proposed Innovation Training (Run 1)
+            # 5.3. Chạy Proposed Innovation Training (Run 1) với cơ chế Tự sửa lỗi (Self-Healing Loop)
             print(f"[PyTorch Engine] Đang huấn luyện mô hình cải tiến theo phát minh mới (Run 1)... [timeout={TRAIN_TIMEOUT}s]")
             upgraded_stderr_log = os.path.join(exp_work_dir, "upgraded_stderr.log")
-            try:
-                upg_res = subprocess.run(
-                    [sys.executable, "experiment_upgraded.py", "--out_dir=run_1"],
-                    cwd=exp_work_dir,
-                    capture_output=True,
-                    text=True,
-                    timeout=TRAIN_TIMEOUT,
-                    env=train_env
-                )
-                with open(upgraded_stderr_log, "w", encoding="utf-8") as f_err:
-                    f_err.write(upg_res.stderr or "")
-                if upg_res.returncode == 0:
-                    print("[PyTorch Engine] Huấn luyện mô hình cải tiến (Run 1) THÀNH CÔNG RỰC RỠ!")
-                else:
-                    print(f"[PyTorch Engine] Cảnh báo Run 1 (Exit {upg_res.returncode}): Log ghi tại {upgraded_stderr_log}")
-            except subprocess.TimeoutExpired:
-                print(f"[PyTorch Engine] Run 1 vượt quá {TRAIN_TIMEOUT}s timeout.")
-                with open(upgraded_stderr_log, "w", encoding="utf-8") as f_err:
-                    f_err.write("TimeoutExpired")
+            
+            MAX_CODE_RETRIES = 2
+            run1_success = False
+
+            for attempt in range(MAX_CODE_RETRIES + 1):
+                try:
+                    upg_res = subprocess.run(
+                        [sys.executable, "experiment_upgraded.py", "--out_dir=run_1"],
+                        cwd=exp_work_dir,
+                        capture_output=True,
+                        text=True,
+                        timeout=TRAIN_TIMEOUT,
+                        env=train_env
+                    )
+                    with open(upgraded_stderr_log, "w", encoding="utf-8") as f_err:
+                        f_err.write(upg_res.stderr or "")
+
+                    if upg_res.returncode == 0:
+                        print("[PyTorch Engine] Huấn luyện mô hình cải tiến (Run 1) THÀNH CÔNG RỰC RỠ!")
+                        run1_success = True
+                        break
+                    else:
+                        err_snippet = (upg_res.stderr or "").strip()
+                        last_err = err_snippet.splitlines()[-1] if err_snippet else "Unknown error"
+                        print(f"[PyTorch Engine] Cảnh báo Run 1 (Lần {attempt+1}/{MAX_CODE_RETRIES+1} - Exit {upg_res.returncode}): {last_err}")
+                        if attempt < MAX_CODE_RETRIES:
+                            print(f"[CoderAgent] Kích hoạt VÒNG LẶP TỰ SỬA LỖI (Self-Healing)... Đang yêu cầu CoderAgent phân tích lỗi và sửa lại mã nguồn...")
+                            upgraded_code = self.coder_agent.modify_template_code(
+                                base_code=upgraded_code,
+                                method_info=context,
+                                experiment_design=context,
+                                error_context=err_snippet
+                            )
+                            with open(upgraded_script_path, "w", encoding="utf-8") as f:
+                                f.write(upgraded_code)
+                except subprocess.TimeoutExpired:
+                    print(f"[PyTorch Engine] Run 1 vượt quá {TRAIN_TIMEOUT}s timeout.")
+                    with open(upgraded_stderr_log, "w", encoding="utf-8") as f_err:
+                        f_err.write("TimeoutExpired")
+                    break
         except Exception as e:
             print(f"[CoderAgent] Lưu ý khi nâng cấp code: {e}")
 
@@ -445,8 +466,9 @@ class DeepScientistPipeline:
                 except Exception:
                     pass
 
+        # TUYỆT ĐỐI KHÔNG COPY số liệu Baseline sang Proposed nếu Run 1 thất bại!
         if not proposed_metrics and baseline_metrics:
-            proposed_metrics = baseline_metrics
+            print("[Evidence Tracker] LƯU Ý: Run 1 không sinh ra metrics độc lập, chỉ hiển thị số liệu Baseline chuẩn.")
 
         # Thiết lập full_metrics đa mô hình để ClaimLedger và Table 1 có đầy đủ đối sánh
         full_metrics = {}

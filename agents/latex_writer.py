@@ -412,6 +412,9 @@ Output ONLY raw BibTeX."""
         if open_braces > close_braces:
             text += "}" * (open_braces - close_braces)
 
+        # Loại bỏ các key biến python thô bị rò rỉ trong ngoặc dạng (ate_dual_vs_sglt2) hoặc (variable_name)
+        text = re.sub(r"\s*\([a-z0-9]+(?:_[a-z0-9]+)+\)", "", text)
+
         text = text.replace("&amp;", r"\&")
         text = re.sub(r"(?<!\\)%", r"\%", text)
         return text.strip()
@@ -611,6 +614,7 @@ CRITICAL SCIENTIFIC REQUIREMENTS:
 - Acknowledge the training budget (60 epochs) honestly — do not claim complete asymptotic convergence if loss is still descending.
 - DO NOT use variable backticks (e.g. no `best_val_accuracy`).
 - DO NOT include verification tags like (R1, R2).
+- NO RAW CODE VARIABLE NAMES: NEVER print raw Python dictionary keys with underscores like `ate_dual_vs_sglt2`, `true_relative_risk_triple`, `test_accuracy` in parentheses or prose. Always convert them to proper academic terms or clean mathematical notation (for example: Average Treatment Effect ATE, Relative Risk RR, or C-index).
 Provide ONLY LaTeX body text. No \\section headers.
 """
         return self.llm.generate(prompt)
