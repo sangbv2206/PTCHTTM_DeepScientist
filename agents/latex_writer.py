@@ -97,6 +97,8 @@ class LaTeXWriter:
             cite_keys.append((key, paper.get("title", "")))
 
         bibtex_content = "\n\n".join(bib_entries)
+        # Loại bỏ ký tự CJK / Unicode vượt ngoài font encoding của pdflatex
+        bibtex_content = re.sub(r'[\u4e00-\u9fff\u3040-\u30ff\uac00-\ud7af]', '', bibtex_content)
         bib_path = os.path.join(latex_dir, "references.bib")
         with open(bib_path, "w", encoding="utf-8") as f:
             f.write(bibtex_content)
@@ -318,6 +320,8 @@ Output ONLY raw BibTeX."""
             delim_open = match.group(2)
             content = match.group(3)
             delim_close = match.group(4)
+            # Loại bỏ ký tự CJK / Unicode vượt ngoài font encoding của pdflatex
+            content = re.sub(r'[\u4e00-\u9fff\u3040-\u30ff\uac00-\ud7af]', '', content)
             escaped_content = re.sub(r'(?<!\\)_', r'\_', content)
             escaped_content = re.sub(r'(?<!\\)&', r'\&', escaped_content)
             return f"{field_name} = {delim_open}{escaped_content}{delim_close}"
@@ -336,6 +340,10 @@ Output ONLY raw BibTeX."""
             return ""
         text = re.sub(r"^```(?:latex|tex)?\s*", "", text, flags=re.MULTILINE)
         text = re.sub(r"\s*```$", "", text, flags=re.MULTILINE)
+
+        # Loại bỏ \chapter (không hỗ trợ trong article class) và \newtheorem trùng lặp đã có ở preamble
+        text = re.sub(r"\\chapter\*?\{([^}]+)\}", r"\\subsection{\1}", text)
+        text = re.sub(r"\\newtheorem\{[^}]*\}\{[^}]*\}", "", text)
 
         if parent_title:
             norm_parent = re.sub(r"[^a-zA-Z0-9]", "", parent_title).lower()
@@ -382,13 +390,53 @@ Output ONLY raw BibTeX."""
         # Loại bỏ các tag placeholder dạng <<...>>
         text = re.sub(r"<<[A-Z0-9_]+>>", "", text)
 
-        # Tránh lỗi bảng tràn lề
-        def wrap_tabular(match):
-            start = match.start()
-            preceding = text[max(0, start - 60):start]
-            if "\\resizebox" in preceding:
-                return match.group(0)
-            return f"\\resizebox{{\\columnwidth}}{{!}}{{\n{match.group(0)}\n}}"
+        # Chuyển đổi tên biến trong nháy đơn có gạch dưới e.g. 'causal_trial_emulation' -> \texttt{causal\_trial\_emulation}
+        def clean_quoted_identifiers(m):
+            content = m.group(1).replace("_", r"\_")
+            return f"\\texttt{{{content}}}"
+        text = re.sub(r"(?<![a-zA-Z0-9])'([a-zA-Z0-9]+(?:_[a-zA-Z0-9]+)+)'(?![a-zA-Z0-9])", clean_quoted_identifiers, text)
+
+        # Thoát các dấu gạch dưới tự do trong văn bản thường (tránh kích hoạt LaTeX math mode gây nuốt khoảng trắng)
+        def escape_plain_text_underscores(t: str) -> str:
+            pattern = re.compile(
+                r'(\\begin\{(?:equation|equation\*|align|align\*|gather|gather\*|table|table\*|figure|figure\*|tabular|tabularx)\}[\s\S]*?\\end\{(?:equation|equation\*|align|align\*|gather|gather\*|table|table\*|figure|figure\*|tabular|tabularx)\})|'
+                r'(\$\$[\s\S]*?\$\$)|'
+                r'(\\\[[\s\S]*?\\\])|'
+                r'(\$(?:\\\$|[^\$])+\$)|'
+                r'(\\\([\s\S]*?\\\))|'
+                r'(\\(?:cite|ref|label|includegraphics|url|eqref|path|lstinline)\*?(?:\[[^\]]*\])?\{[^}]*\})|'
+                r'(\\(?:begin|end)\{[^}]*\})'
+            )
+            pos = 0
+            chunks = []
+            for m in pattern.finditer(t):
+                plain = t[pos:m.start()]
+                plain = re.sub(r'(?<!\\)_', r'\_', plain)
+                chunks.append(plain)
+                chunks.append(m.group(0))
+                pos = m.end()
+            plain = t[pos:]
+            plain = re.sub(r'(?<!\\)_', r'\_', plain)
+            chunks.append(plain)
+            return "".join(chunks)
+
+        text = escape_plain_text_underscores(text)
+
+        # Nâng cấp bảng có nhiều cột hoặc bảng kết quả chính sang table* (2 cột) để tránh tràn lề
+        def upgrade_wide_table(m):
+            tbl_block = m.group(0)
+            if "tab:empirical_results" in tbl_block or ("&" in tbl_block and tbl_block.count("&") >= 4):
+                tbl_block = re.sub(r"\\begin\{table\}(\[[^\]]*\])?", r"\\begin{table*}[t]", tbl_block)
+                tbl_block = re.sub(r"\\end\{table\}", r"\\end{table*}", tbl_block)
+                if "\\resizebox" not in tbl_block and "\\begin{tabular}" in tbl_block:
+                    tbl_block = re.sub(
+                        r"(\\begin\{tabular\}\{[^}]+\}[\s\S]*?\\end\{tabular\})",
+                        r"\\resizebox{\\textwidth}{!}{\1}",
+                        tbl_block
+                    )
+            return tbl_block
+
+        text = re.sub(r"\\begin\{table\}[\s\S]*?\\end\{table\}", upgrade_wide_table, text)
 
         # Tu dong co gon cac cong thuc toan qua dai bang adjustbox (chi thu nho khi tran cot, khong bao gio phong to cong thuc ngan)
         def wrap_wide_equation(match):
@@ -572,6 +620,7 @@ Provide ONLY LaTeX body text. No \\section headers.
         dataset_info: str = ""
     ) -> str:
         figs_latex = ""
+        fig_blocks = []
         for fig_file in actual_figures:
             clean_id = os.path.splitext(fig_file)[0]
             if "2" in clean_id:
@@ -583,14 +632,14 @@ Provide ONLY LaTeX body text. No \\section headers.
             else:
                 cap = f"\\textbf{{Diagnostic empirical visualization of \\textsc{{{method_abbr}}}.}} Quantitative evaluation on the target task."
                 lbl = f"fig:{clean_id}"
-            figs_latex += f"""
-\\begin{{figure}}[htbp]
+            block = f"""\\begin{{figure}}[htbp]
 \\centering
 \\includegraphics[width=\\columnwidth]{{{fig_file}}}
 \\caption{{{cap}}}
 \\label{{{lbl}}}
-\\end{{figure}}
-"""
+\\end{{figure}}"""
+            fig_blocks.append((lbl, fig_file, block))
+            figs_latex += "\n" + block + "\n"
 
         prompt = f"""Write the Experimental Setup & Empirical Evaluation section in LaTeX for "{user_topic}".
 Proposed Method: \\textsc{{{method_abbr}}}
@@ -617,7 +666,14 @@ CRITICAL SCIENTIFIC REQUIREMENTS:
 - NO RAW CODE VARIABLE NAMES: NEVER print raw Python dictionary keys with underscores like `ate_dual_vs_sglt2`, `true_relative_risk_triple`, `test_accuracy` in parentheses or prose. Always convert them to proper academic terms or clean mathematical notation (for example: Average Treatment Effect ATE, Relative Risk RR, or C-index).
 Provide ONLY LaTeX body text. No \\section headers.
 """
-        return self.llm.generate(prompt)
+        res = self.llm.generate(prompt)
+
+        # Đảm bảo 100% hình ảnh thực nghiệm và các nhãn \label{...} được nhúng vào bài báo
+        for lbl, fig_file, block in fig_blocks:
+            if lbl not in res and fig_file not in res:
+                res += f"\n\n{block}\n"
+
+        return res
 
     def _write_discussion(
         self,
@@ -759,7 +815,7 @@ All experiments and evaluations reported in this manuscript were autonomously ex
 \textbf{Environment Parameter} & \textbf{System Specification} \\
 \midrule
 Operating System & __OS_NAME__ \\
-Host Architecture & x86_64 (__CPU_COUNT__ CPU Cores) \\
+Host Architecture & x86\_64 (__CPU_COUNT__ CPU Cores) \\
 System Memory (RAM) & __RAM_GB__ GB \\
 Compute Accelerator & __DEVICE_NAME__ (__DEVICE_MODE__ Mode) \\
 Python Runtime & Python __PY_VER__ \\

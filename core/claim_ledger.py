@@ -206,13 +206,17 @@ class ClaimLedger:
                 name = name.replace(" Sec", " (s)")
             return name
 
-        col_spec = "l" + "c" * len(all_metrics_keys)
+        is_wide = len(all_metrics_keys) >= 3
+        tbl_env = "table*" if is_wide else "table"
+        tbl_pos = "[t]" if is_wide else "[htbp]"
         latex = [
-            "\\begin{table}[htbp]",
+            f"\\begin{{{tbl_env}}}{tbl_pos}",
             "\\centering",
             f"\\caption{{{caption}}}",
+            "\\vspace{0.3em}",
             "\\label{tab:empirical_results}",
             "\\small",
+            f"\\resizebox{{{('\\textwidth' if is_wide else '\\columnwidth')}}}{{!}}{{",
             f"\\begin{{tabular}}{{{col_spec}}}",
             "\\toprule",
             "\\textbf{Method / Architecture} & " + " & ".join(f"\\textbf{{{format_col_header(k)}}}" for k in all_metrics_keys) + " \\\\",
@@ -249,7 +253,8 @@ class ClaimLedger:
         latex.extend([
             "\\bottomrule",
             "\\end{tabular}",
-            "\\end{table}"
+            "}",
+            f"\\end{{{tbl_env}}}"
         ])
         return "\n".join(latex)
 
