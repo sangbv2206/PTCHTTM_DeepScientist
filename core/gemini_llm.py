@@ -63,7 +63,10 @@ class GeminiLLM:
             load_dotenv()
         except ImportError:
             pass
-        self.api_key = api_key or os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")
+        raw_keys = api_key or os.getenv("GEMINI_API_KEYS") or os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY") or ""
+        self.api_keys = [k.strip() for k in raw_keys.split(",") if k.strip()]
+        self.current_key_idx = 0
+        self.api_key = self.api_keys[0] if self.api_keys else ""
         self.model_name = os.getenv("GEMINI_MODEL", model_name or "gemini-2.0-flash")
         self.temperature = temperature
         self.max_retries = max_retries
@@ -73,10 +76,10 @@ class GeminiLLM:
         if not self.api_key:
             raise ValueError(
                 "Chưa tìm thấy API Key! Vui lòng truyền tham số --api-key hoặc thiết lập biến môi trường "
-                "GEMINI_API_KEY (lấy miễn phí 100% tại https://aistudio.google.com/)."
+                "GEMINI_API_KEY hoặc GEMINI_API_KEYS (lấy miễn phí 100% tại https://aistudio.google.com/)."
             )
 
-        print(f"[GeminiLLM] Đã khởi tạo LLM Client với model gốc: '{self.model_name}' (Pacing: {self.min_request_interval}s/req)")
+        print(f"[GeminiLLM] Đã khởi tạo LLM Client với {len(self.api_keys)} API Keys, model gốc: '{self.model_name}' (Pacing: {self.min_request_interval}s/req)")
         self._init_models()
 
     def _init_models(self):
@@ -98,6 +101,17 @@ class GeminiLLM:
                 self.native_model = None
         else:
             self.native_model = None
+
+    def _rotate_api_key(self) -> bool:
+        """Xoay vòng sang API Key kế tiếp nếu có nhiều hơn 1 key được cấu hình."""
+        if len(self.api_keys) > 1:
+            self.current_key_idx = (self.current_key_idx + 1) % len(self.api_keys)
+            self.api_key = self.api_keys[self.current_key_idx]
+            masked_key = self.api_key[:6] + "..." + self.api_key[-4:] if len(self.api_key) > 10 else "***"
+            print(f"\n[GeminiLLM] TỰ ĐỘNG XOAY VÒNG KEY: Chuyển sang API Key #{self.current_key_idx + 1} ({masked_key}) để giải phóng hạn ngạch...")
+            self._init_models()
+            return True
+        return False
 
     def _switch_to_next_fallback_model(self):
         try:
@@ -165,6 +179,11 @@ class GeminiLLM:
 
                 # 2. Nếu là Rate Limit / Quota (429, resource_exhausted)
                 if any(kw in err_str for kw in ["quota", "resourceexhausted", "resource_exhausted", "429"]):
+                    # Ưu tiên xoay vòng ngay sang API Key kế tiếp nếu có cấu hình nhiều key
+                    if self._rotate_api_key():
+                        time.sleep(1)
+                        continue
+
                     rpm_429_count += 1
                     # Nếu mới gặp 1-2 lần -> khả năng cao là chạm trần RPM, chỉ cần backoff nghỉ 10s-20s rồi thử lại cùng model!
                     if rpm_429_count <= 2:

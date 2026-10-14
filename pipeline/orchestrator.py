@@ -24,6 +24,7 @@ from agents.peer_reviewer import PeerReviewer
 import time
 from core.contracts import EnvironmentInfo, FigureManifestItem, validate_results_data
 from core.claim_ledger import ClaimLedger
+from core.universal_plotter import UniversalPlotter
 
 
 def safe_float(val: Any, default: float = 4.0) -> float:
@@ -530,6 +531,9 @@ class DeepScientistPipeline:
                     print(f"[PyTorch Engine] Cảnh báo khi chạy plot.py: {plot_res.stderr[:200]}")
             except Exception as e:
                 print(f"[PyTorch Engine] Ngoại lệ khi chạy plot.py: {e}")
+
+        # 5.4c. Bảo đảm các hình ảnh thực nghiệm luôn tồn tại và bám sát log số liệu thật (UniversalPlotter)
+        UniversalPlotter.ensure_grounded_figures(exp_work_dir, full_metrics, user_topic=self.user_topic)
 
         # 5.5. Quét hình ảnh thực tế từ thư mục thực nghiệm (Không hardcode 8 ảnh)
         figure_manifest = []
