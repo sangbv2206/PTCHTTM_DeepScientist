@@ -36,20 +36,18 @@ from openai import OpenAI
 FALLBACK_MODELS = [
     "gemini-2.0-flash",
     "gemini-2.0-flash-lite",
-    "gemini-1.5-flash",
-    "gemini-1.5-flash-8b",
     "gemini-2.5-flash",
-    "gemini-2.5-flash-lite",
-    "gemini-2.0-flash-thinking-exp-01-21",
-    "gemini-1.5-pro",
+    "gemini-1.5-flash",
 ]
 
 
 class GeminiLLM:
     """
     LLM Client chi phí 0đ chuyên dụng cho DeepScientist, hỗ trợ Google Gemini API.
-    Có cơ chế tự động xoay vòng model thông minh (fallback cascading) và thử lại (exponential backoff)
-    để không bao giờ bị gián đoạn do Rate Limit hay hết Quota Free Tier.
+    - Điều tiết tốc độ gọi (Pacing: tối thiểu 4.0s giữa các request) để không chạm trần RPM.
+    - Khi gặp 429 (Rate Limit): Áp dụng Exponential Backoff trên cùng một model trước.
+    - Cố định tính nhất quán của model trong một bài báo.
+    - Chuẩn bảo đảm chất lượng (Fail-Closed): Ném ngoại lệ khi hết số lần thử, không bao giờ trả về chuỗi rỗng.
     """
 
     def __init__(
@@ -58,6 +56,7 @@ class GeminiLLM:
         model_name: str = "gemini-2.0-flash",
         temperature: float = 0.7,
         max_retries: int = 5,
+        min_request_interval: float = 4.0,
     ):
         try:
             from dotenv import load_dotenv
@@ -68,6 +67,8 @@ class GeminiLLM:
         self.model_name = os.getenv("GEMINI_MODEL", model_name or "gemini-2.0-flash")
         self.temperature = temperature
         self.max_retries = max_retries
+        self.min_request_interval = min_request_interval
+        self._last_request_time = 0.0
 
         if not self.api_key:
             raise ValueError(
@@ -75,6 +76,7 @@ class GeminiLLM:
                 "GEMINI_API_KEY (lấy miễn phí 100% tại https://aistudio.google.com/)."
             )
 
+        print(f"[GeminiLLM] Đã khởi tạo LLM Client với model gốc: '{self.model_name}' (Pacing: {self.min_request_interval}s/req)")
         self._init_models()
 
     def _init_models(self):
@@ -104,10 +106,19 @@ class GeminiLLM:
         except ValueError:
             next_idx = 0
         candidate = FALLBACK_MODELS[next_idx]
-        print(f"[GeminiLLM] Model '{self.model_name}' gặp sự cố/hết quota. Tự động chuyển sang model dự phòng '{candidate}'...")
+        print(f"\n[GeminiLLM] CẢNH BÁO CHUYỂN MODEL: Model '{self.model_name}' đã cạn kiệt Daily Quota hoặc không hỗ trợ. Chuyển sang: '{candidate}'...")
         self.model_name = candidate
         self._init_models()
         return True
+
+    def _wait_pacing(self):
+        """Giữ khoảng cách tối thiểu giữa các lệnh gọi để không bị vượt quá RPM của Free Tier."""
+        now = time.time()
+        elapsed = now - self._last_request_time
+        if elapsed < self.min_request_interval:
+            sleep_time = self.min_request_interval - elapsed
+            time.sleep(sleep_time)
+        self._last_request_time = time.time()
 
     def generate(
         self,
@@ -115,11 +126,13 @@ class GeminiLLM:
         system_instruction: Optional[str] = None,
         temperature: Optional[float] = None,
     ) -> str:
-        """Gửi prompt tới Gemini API qua REST HTTPS ổn định, tự động đổi model khi gặp Rate Limit/Quota."""
+        """Gửi prompt tới Gemini API với Pacing và Exponential Backoff thông minh."""
         temp = temperature if temperature is not None else self.temperature
         attempt = 0
+        rpm_429_count = 0
 
         while attempt < self.max_retries:
+            self._wait_pacing()
             try:
                 messages = []
                 if system_instruction:
@@ -130,26 +143,48 @@ class GeminiLLM:
                     model=self.model_name,
                     messages=messages,
                     temperature=temp,
+                    max_tokens=8192,
                 )
                 if res and res.choices and len(res.choices) > 0:
                     content = res.choices[0].message.content
-                    if content:
+                    if content and content.strip():
                         return content.strip()
 
+                raise ValueError(f"Gemini API trả về nội dung rỗng (Model: {self.model_name})")
+
             except Exception as e:
-                err_str = str(e)
+                err_str = str(e).lower()
                 attempt += 1
 
-                # Nếu hết quota (429, ResourceExhausted, 404 not found), đổi ngay model kế tiếp
-                if any(kw in err_str.lower() for kw in ["quota", "resourceexhausted", "429", "401", "not_found", "unsupported", "404"]):
+                # 1. Nếu model bị deprecated / không tìm thấy (404/not_found)
+                if any(kw in err_str for kw in ["not_found", "unsupported", "404", "invalid_argument"]):
+                    print(f"[GeminiLLM] Model '{self.model_name}' không tồn tại hoặc không hỗ trợ ({e}). Chuyển model dự phòng...")
                     self._switch_to_next_fallback_model()
                     time.sleep(1)
                     continue
 
+                # 2. Nếu là Rate Limit / Quota (429, resource_exhausted)
+                if any(kw in err_str for kw in ["quota", "resourceexhausted", "resource_exhausted", "429"]):
+                    rpm_429_count += 1
+                    # Nếu mới gặp 1-2 lần -> khả năng cao là chạm trần RPM, chỉ cần backoff nghỉ 10s-20s rồi thử lại cùng model!
+                    if rpm_429_count <= 2:
+                        wait_time = 12 * rpm_429_count
+                        print(f"[GeminiLLM] Chạm ngưỡng RPM của Free Tier ({self.model_name}). Nghỉ {wait_time}s rồi tiếp tục...")
+                        time.sleep(wait_time)
+                        continue
+                    else:
+                        # Nếu đã backoff 2 lần mà vẫn 429 -> đã hết Daily Quota (RPD) của model này -> mới chuyển model!
+                        print(f"[GeminiLLM] Model '{self.model_name}' liên tục 429 (nghi hết Daily Quota RPD). Đổi sang model kế tiếp...")
+                        self._switch_to_next_fallback_model()
+                        time.sleep(2)
+                        continue
+
+                # 3. Lỗi mạng hoặc server thông thường
                 wait_time = 2 * attempt
-                print(f"[GeminiLLM] Lỗi API (Lần {attempt}/{self.max_retries}): {err_str[:120]}... Đang đợi {wait_time}s...")
+                print(f"[GeminiLLM] Lỗi API (Lần {attempt}/{self.max_retries}): {str(e)[:120]}... Đang đợi {wait_time}s...")
                 if attempt >= self.max_retries:
-                    raise RuntimeError(f"Gọi Gemini API thất bại sau {self.max_retries} lần thử: {e}")
+                    raise RuntimeError(f"[GeminiLLM] Thất bại sau {self.max_retries} lần thử: {e}")
                 time.sleep(wait_time)
 
-        return ""
+        raise RuntimeError(f"[GeminiLLM] Không thể sinh phản hồi từ API sau {self.max_retries} lần thử (Model: {self.model_name})")
+

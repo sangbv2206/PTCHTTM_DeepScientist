@@ -1,0 +1,65 @@
+{
+  "topic": "Grokking Phenomenon in Neural Networks: Accelerating Generalization via Sharpness-Aware Minimization",
+  "data_coverage": {
+    "status": "STRONG",
+    "coverage_score": 0.7142857142857143,
+    "coverage_percent": 71.4,
+    "top_relevance_score": 83.6,
+    "matched_keywords": [
+      "phenomenon",
+      "accelerating",
+      "generalization",
+      "aware",
+      "minimization"
+    ],
+    "missing_keywords": [
+      "grokking",
+      "sharpness"
+    ],
+    "best_paper": {
+      "corpusid": 249605545,
+      "title": "The Slingshot Mechanism: An Empirical Study of Adaptive Optimizers and the Grokking Phenomenon",
+      "abstract": "The grokking phenomenon as reported by Power et al. ( arXiv:2201.02177 ) refers to a regime where a long period of overfitting is followed by a seemingly sudden transition to perfect generalization. In this paper, we attempt to reveal the underpinnings of Grokking via a series of empirical studies. Specifically, we uncover an optimization anomaly plaguing adaptive optimizers at extremely late stages of training, referred to as the Slingshot Mechanism. A prominent artifact of the Slingshot Mechanism can be measured by the cyclic phase transitions between stable and unstable training regimes, and can be easily monitored by the cyclic behavior of the norm of the last layers weights. We empirically observe that without explicit regularization, Grokking as reported in ( arXiv:2201.02177 ) almost exclusively happens at the onset of Slingshots, and is absent without it. While common and easily reproduced in more general settings, the Slingshot Mechanism does not follow from any known optimization theories that we are aware of, and can be easily overlooked without an in depth examination. Our work points to a surprising and useful inductive bias of adaptive gradient optimizers at late stages of training, calling for a revised theoretical analysis of their origin."
+    },
+    "candidate_papers": [
+      {
+        "corpusid": 249605545,
+        "title": "The Slingshot Mechanism: An Empirical Study of Adaptive Optimizers and the Grokking Phenomenon",
+        "abstract": "The grokking phenomenon as reported by Power et al. ( arXiv:2201.02177 ) refers to a regime where a long period of overfitting is followed by a seemingly sudden transition to perfect generalization. In this paper, we attempt to reveal the underpinnings of Grokking via a series of empirical studies. Specifically, we uncover an optimization anomaly plaguing adaptive optimizers at extremely late stages of training, referred to as the Slingshot Mechanism. A prominent artifact of the Slingshot Mechanism can be measured by the cyclic phase transitions between stable and unstable training regimes, and can be easily monitored by the cyclic behavior of the norm of the last layers weights. We empirically observe that without explicit regularization, Grokking as reported in ( arXiv:2201.02177 ) almost exclusively happens at the onset of Slingshots, and is absent without it. While common and easily reproduced in more general settings, the Slingshot Mechanism does not follow from any known optimization theories that we are aware of, and can be easily overlooked without an in depth examination. Our work points to a surprising and useful inductive bias of adaptive gradient optimizers at late stages of training, calling for a revised theoretical analysis of their origin."
+      },
+      {
+        "corpusid": 245769834,
+        "title": "Grokking: Generalization Beyond Overfitting on Small Algorithmic Datasets",
+        "abstract": "In this paper we propose to study generalization of neural networks on small algorithmically generated datasets. In this setting, questions about data efficiency, memorization, generalization, and speed of learning can be studied in great detail. In some situations we show that neural networks learn through a process of\"grokking\"a pattern in the data, improving generalization performance from random chance level to perfect generalization, and that this improvement in generalization can happen well past the point of overfitting. We also study generalization as a function of dataset size and find that smaller datasets require increasing amounts of optimization for generalization. We argue that these datasets provide a fertile ground for studying a poorly understood aspect of deep learning: generalization of overparametrized neural networks beyond memorization of the finite training dataset."
+      },
+      {
+        "corpusid": 259243744,
+        "title": "Predicting Grokking Long Before it Happens: A look into the loss landscape of models which grok",
+        "abstract": "This paper focuses on predicting the occurrence of grokking in neural networks, a phenomenon in which perfect generalization emerges long after signs of overfitting or memorization are observed. It has been reported that grokking can only be observed with certain hyper-parameters. This makes it critical to identify the parameters that lead to grokking. However, since grokking occurs after a large number of epochs, searching for the hyper-parameters that lead to it is time-consuming. In this paper, we propose a low-cost method to predict grokking without training for a large number of epochs. In essence, by studying the learning curve of the first few epochs, we show that one can predict whether grokking will occur later on. Specifically, if certain oscillations occur in the early epochs, one can expect grokking to occur if the model is trained for a much longer period of time. We propose using the spectral signature of a learning curve derived by applying the Fourier transform to quantify the amplitude of low-frequency components to detect the presence of such oscillations. We also present additional experiments aimed at explaining the cause of these oscillations and characterizing the loss landscape."
+      },
+      {
+        "corpusid": 252683312,
+        "title": "Omnigrok: Grokking Beyond Algorithmic Data",
+        "abstract": "Grokking, the unusual phenomenon for algorithmic datasets where generalization happens long after overfitting the training data, has remained elusive. We aim to understand grokking by analyzing the loss landscapes of neural networks, identifying the mismatch between training and test losses as the cause for grokking. We refer to this as the\"LU mechanism\"because training and test losses (against model weight norm) typically resemble\"L\"and\"U\", respectively. This simple mechanism can nicely explain many aspects of grokking: data size dependence, weight decay dependence, the emergence of representations, etc. Guided by the intuitive picture, we are able to induce grokking on tasks involving images, language and molecules. In the reverse direction, we are able to eliminate grokking for algorithmic datasets. We attribute the dramatic nature of grokking for algorithmic datasets to representation learning."
+      },
+      {
+        "corpusid": 248965387,
+        "title": "Towards Understanding Grokking: An Effective Theory of Representation Learning",
+        "abstract": "We aim to understand grokking, a phenomenon where models generalize long after overfitting their training set. We present both a microscopic analysis anchored by an effective theory and a macroscopic analysis of phase diagrams describing learning performance across hyperparameters. We find that generalization originates from structured representations whose training dynamics and dependence on training set size can be predicted by our effective theory in a toy setting. We observe empirically the presence of four learning phases: comprehension, grokking, memorization, and confusion. We find representation learning to occur only in a\"Goldilocks zone\"(including comprehension and grokking) between memorization and confusion. We find on transformers the grokking phase stays closer to the memorization phase (compared to the comprehension phase), leading to delayed generalization. The Goldilocks phase is reminiscent of\"intelligence from starvation\"in Darwinian evolution, where resource limitations drive discovery of more efficient solutions. This study not only provides intuitive explanations of the origin of grokking, but also highlights the usefulness of physics-inspired tools, e.g., effective theories and phase diagrams, for understanding deep learning."
+      }
+    ],
+    "num_candidates": 5,
+    "warning": null,
+    "solutions": [
+      "Cơ sở dữ liệu hỗ trợ tốt, có đầy đủ tài liệu nền tảng để trích dẫn và đối sánh."
+    ]
+  },
+  "template_suitability": {
+    "is_supported": true,
+    "confidence": 10,
+    "selected_template": "grokking",
+    "reasoning": "Đề tài nghiên cứu về hiện tượng Grokking (sự tổng quát hóa muộn màng) và tối ưu hóa nhằm tăng tốc độ tổng quát hóa trong mạng neural, khớp hoàn hảo với phạm vi và từ khóa của template grokking.",
+    "suggestions": "Thử nghiệm thay đổi hệ số weight decay, learning rate, và áp dụng thuật toán Sharpness-Aware Minimization (SAM) để quan sát sự rút ngắn của giai đoạn trì hoãn tổng quát hóa."
+  },
+  "selected_template": "grokking"
+}

@@ -1,0 +1,27 @@
+{
+  "summary": "The paper introduces Adaptive Grid-Refining Physics-Informed Kolmogorov-Arnold Networks with Conformal Uncertainty Quantification (AG-PIKAN), a unified framework for Scientific Machine Learning (SciML). It aims to solve the limitations of static B-spline grids in traditional KANs when applied to high-dimensional, stiff, and multi-scale differential equations. The method dynamically adapts knot vectors based on the local curvature (Hessian trace) of physical residuals, integrates symbolic pruning for equation discovery, and incorporates a conformal prediction wrapper to provide distribution-free, finite-sample uncertainty coverage.",
+  "strengths": [
+    "Novel integration of adaptive B-spline grid refinement with physics-informed learning, addressing the well-known interpolation bottlenecks and spectral bias of static-grid KANs in stiff PDEs.",
+    "Principled pipeline combining symbolic pruning/regularization for mathematical expression extraction with rigorous conformal uncertainty quantification.",
+    "Clear, mathematically rigorous formulation of the adaptive knot-allocation strategy driven by physical residual Hessians."
+  ],
+  "weaknesses": [
+    "The experimental section in the provided source text is incomplete (cuts off abruptly in the problem formulation section), meaning empirical validation details, runtime overhead comparisons, and baseline comparisons are missing from the current draft.",
+    "The computational cost and wall-clock overhead of computing Hessian traces for dynamic grid refinement on large collocation meshes are not explicitly analyzed.",
+    "Lack of explicit discussion regarding how conformal calibration handles temporal-spatial correlations in trajectory forecasting."
+  ],
+  "questions": [
+    "What is the computational overhead of computing the Hessian trace $\tau(x,t)$ for adaptive knot allocation compared to standard static-grid training epochs?",
+    "How does the conformal prediction framework account for temporal and spatial dependencies when computing non-conformity scores on spatio-temporal trajectories?",
+    "Could the authors elaborate on the exact symbolic pruning thresholding criteria used to transition from unconstrained B-splines to clean analytical expressions?"
+  ],
+  "scores": {
+    "soundness": 3,
+    "presentation": 4,
+    "contribution": 3,
+    "overall_rating": 7,
+    "confidence": 4
+  },
+  "recommendation": "Weak Accept",
+  "ethical_considerations": "None."
+}

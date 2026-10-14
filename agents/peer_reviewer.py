@@ -6,17 +6,10 @@ from core.gemini_llm import GeminiLLM
 
 
 class PeerReviewer:
-    """
-    Tác nhân phản biện học thuật độc lập (kế thừa perform_review từ Sakana AI):
-    Đánh giá bài báo khoa học theo tiêu chuẩn hội nghị top-tier (ICLR / NeurIPS).
-    Xuất ra file peer_review.json và báo cáo Markdown chi tiết peer_review.md.
-    """
-
     def __init__(self, llm: GeminiLLM):
         self.llm = llm
 
     def _parse_review_response(self, response_text: str, paper_title: str, metrics: Dict[str, Any]) -> Dict[str, Any]:
-        """Trích xuất và chuẩn hóa JSON phản biện, fallback thông minh nếu LLM trả về định dạng lỗi."""
         json_str = ""
         match = re.search(r"```(?:json)?\s*(\{[\s\S]*?\})\s*```", response_text)
         if match:
@@ -102,7 +95,7 @@ class PeerReviewer:
         tex_content = ""
         if os.path.exists(paper_tex_path):
             with open(paper_tex_path, "r", encoding="utf-8") as f:
-                tex_content = f.read()[:15000]  # Cap to fit prompt cleanly
+                tex_content = f.read()[:150000]  # Allow full manuscript up to 150k chars (Gemini has 1M token context)
 
         prompt = f"""You are a distinguished Area Chair and Senior Reviewer for top AI conferences (ICLR, NeurIPS, ICML).
 Conduct a rigorous, objective, and constructive double-blind peer review of the following scientific submission.

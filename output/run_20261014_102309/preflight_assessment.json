@@ -1,0 +1,205 @@
+{
+  "topic": "Graph Neural Networks for Representation Learning and Node Classification",
+  "data_coverage": {
+    "status": "STRONG",
+    "coverage_score": 1.0,
+    "coverage_percent": 100.0,
+    "top_relevance_score": 94.4,
+    "matched_keywords": [
+      "graph",
+      "representation",
+      "node",
+      "classification"
+    ],
+    "missing_keywords": [],
+    "best_paper": {
+      "corpusid": 901634616,
+      "title": "Property graph representation learning for node classification",
+      "abstract": "Abstract Graph representation learning (graph embedding) has led to breakthrough results in various machine learning graph-based applications such as node classification, link prediction and recommendation. Many real-world graphs can be characterized as the property graphs, because besides the structure information, there exists rich property information related to each node in the graphs. Many existing graph representation learning methods—e.g. random walk-based methods like and , focus only on the structure of graph for learning the node embedding. Although graph representation learning based on neural networks (e.g. typical methods such as ) uses the property of nodes as the initial features of nodes and then aggregates feature information of the neighbours, their limitation is that the neighbourhood of a node is considered to be uniform—i.e. there is no way to differentiate among neighbours of a node when learning a node embedding. Additionally, their definition of neighbourhood is local, i.e. only nodes connected to the current node are considered as neighbours. Hence, those methods fail to capture implicit/latent relationships among nodes, which are implicit in the given structure. In this study, our aim is to improve the performance of graph representation learning methods on property graphs. We present a new framework called ()—a graph representation learning framework to address above-mentioned limitations. Our proposed framework relies on the notion of latent neighbourhood, as well as systematic sampling of neighbouring nodes to obtain better representation of the nodes. The experimental results on five publicly available graph datasets demonstrate that outperforms state-of-the-art baselines for the task of node classification. We further evaluate the superiority of our proposed formulation by defining a novel quantitative metric to measure the usefulness of the sampled neighbourhood in the graph.",
+      "authors": [
+        {
+          "name": "Li Shu"
+        },
+        {
+          "name": "Nayyar Abbas Zaidi"
+        },
+        {
+          "name": "Meijie Du"
+        },
+        {
+          "name": "Zhou Zhou"
+        },
+        {
+          "name": "Hongfei Zhang"
+        },
+        {
+          "name": "Gang Li"
+        }
+      ],
+      "venue": "Knowledge and Information Systems",
+      "year": 2023,
+      "citationcount": 10,
+      "url": "https://doi.org/10.1007/s10115-023-01963-x",
+      "source": "OpenAlex"
+    },
+    "candidate_papers": [
+      {
+        "corpusid": 901634616,
+        "title": "Property graph representation learning for node classification",
+        "abstract": "Abstract Graph representation learning (graph embedding) has led to breakthrough results in various machine learning graph-based applications such as node classification, link prediction and recommendation. Many real-world graphs can be characterized as the property graphs, because besides the structure information, there exists rich property information related to each node in the graphs. Many existing graph representation learning methods—e.g. random walk-based methods like and , focus only on the structure of graph for learning the node embedding. Although graph representation learning based on neural networks (e.g. typical methods such as ) uses the property of nodes as the initial features of nodes and then aggregates feature information of the neighbours, their limitation is that the neighbourhood of a node is considered to be uniform—i.e. there is no way to differentiate among neighbours of a node when learning a node embedding. Additionally, their definition of neighbourhood is local, i.e. only nodes connected to the current node are considered as neighbours. Hence, those methods fail to capture implicit/latent relationships among nodes, which are implicit in the given structure. In this study, our aim is to improve the performance of graph representation learning methods on property graphs. We present a new framework called ()—a graph representation learning framework to address above-mentioned limitations. Our proposed framework relies on the notion of latent neighbourhood, as well as systematic sampling of neighbouring nodes to obtain better representation of the nodes. The experimental results on five publicly available graph datasets demonstrate that outperforms state-of-the-art baselines for the task of node classification. We further evaluate the superiority of our proposed formulation by defining a novel quantitative metric to measure the usefulness of the sampled neighbourhood in the graph.",
+        "authors": [
+          {
+            "name": "Li Shu"
+          },
+          {
+            "name": "Nayyar Abbas Zaidi"
+          },
+          {
+            "name": "Meijie Du"
+          },
+          {
+            "name": "Zhou Zhou"
+          },
+          {
+            "name": "Hongfei Zhang"
+          },
+          {
+            "name": "Gang Li"
+          }
+        ],
+        "venue": "Knowledge and Information Systems",
+        "year": 2023,
+        "citationcount": 10,
+        "url": "https://doi.org/10.1007/s10115-023-01963-x",
+        "source": "OpenAlex"
+      },
+      {
+        "corpusid": 901482565,
+        "title": "Label-Consistency based Graph Neural Networks for Semi-supervised Node Classification",
+        "abstract": "Graph neural networks (GNNs) achieve remarkable success in graph-based semi-supervised node classification, leveraging the information from neighboring nodes to improve the representation learning of target node. The success of GNNs at node classification depends on the assumption that connected nodes tend to have the same label. However, such an assumption does not always work, limiting the performance of GNNs at node classification. In this paper, we propose label-consistency based graph neural network (LC-GNN), leveraging node pairs unconnected but with the same labels to enlarge the receptive field of nodes in GNNs. Experiments on benchmark datasets demonstrate the proposed LC-GNN outperforms traditional GNNs in graph-based semi-supervised node classification. We further show the superiority of LC-GNN in sparse scenarios with only a handful of labeled nodes.",
+        "authors": [
+          {
+            "name": "Bingbing Xu"
+          },
+          {
+            "name": "Junjie Huang"
+          },
+          {
+            "name": "Liang Hou"
+          },
+          {
+            "name": "Huawei Shen"
+          },
+          {
+            "name": "Jinhua Gao"
+          },
+          {
+            "name": "Xueqi Cheng"
+          }
+        ],
+        "venue": "International ACM SIGIR Conference on Research and Development in Information Retrieval (SIGIR)",
+        "year": 2020,
+        "citationcount": 44,
+        "url": "https://doi.org/10.1145/3397271.3401308",
+        "source": "OpenAlex"
+      },
+      {
+        "corpusid": 901814829,
+        "title": "Few-shot Node Classification on Attributed Networks with Graph Meta-learning",
+        "abstract": "Attributed networks, as a manifestation of data in non-Euclidean domains, have a wide range of applications in the real world, such as molecular property prediction, social network analysis and anomaly detection. Node classification, as a fundamental research problem in attributed networks, has attracted increasing attention among research communities. However, most existing models cannot be directly applied to the data with limited labeled instances (\\textiti.e., the few-shot scenario). Few-shot node classification on attributed networks is gradually becoming a research hotspot. Although several methods aim to integrate meta-learning with graph neural networks to address this problem, some limitations remain. First, they all assume node representation learning using graph neural networks in homophilic graphs. %Hence, suboptimal performance is obtained when these models are applied to heterophilic graphs. Second, existing models based on meta-learning entirely depend on instance-based statistics. %which in few-shot settings are unavoidably degraded by data noise or outliers. Third, most previous models treat all sampled tasks equally and fail to adapt their uniqueness. %which has a significant impact on the overall performance of the model. To solve the above three limitations, we propose a novel graph Meta -learning framework called G raph learning based on P rototype and S caling & shifting transformation (Meta-GPS ). More specifically, we introduce an efficient method for learning expressive node representations even on heterophilic graphs and propose utilizing a prototype-based approach to initialize parameters in meta-learning. Moreover, we also leverage S$^2$ (scaling & shifting) transformation to learn effective transferable knowledge from diverse tasks. Extensive experimental results on six real-world datasets demonstrate the superiority of our proposed framework, which outperforms other state-of-the-art baselines by up to 13% absolute improvement in terms of related metrics.",
+        "authors": [
+          {
+            "name": "Yonghao Liu"
+          },
+          {
+            "name": "Mengyu Li"
+          },
+          {
+            "name": "Ximing Li"
+          },
+          {
+            "name": "Fausto Giunchiglia"
+          },
+          {
+            "name": "Xiaoyue Feng"
+          },
+          {
+            "name": "Renchu Guan"
+          }
+        ],
+        "venue": "International ACM SIGIR Conference on Research and Development in Information Retrieval (SIGIR)",
+        "year": 2022,
+        "citationcount": 34,
+        "url": "https://doi.org/10.1145/3477495.3531978",
+        "source": "OpenAlex"
+      },
+      {
+        "corpusid": 901662874,
+        "title": "Disambiguated Node Classification with Graph Neural Networks",
+        "abstract": "Graph Neural Networks (GNNs) have demonstrated significant success in learning from graph-structured data across various domains. Despite their great successful, one critical challenge is often overlooked by existing works, i.e., the learning of message propagation that can generalize effectively to underrepresented graph regions. These minority regions often exhibit irregular homophily/heterophily patterns and diverse neighborhood class distributions, resulting in ambiguity. In this work, we investigate the ambiguity problem within GNNs, its impact on representation learning, and the development of richer supervision signals to fight against this problem. We conduct a fine-grained evaluation of GNN, analyzing the existence of ambiguity in different graph regions and its relation with node positions. To disambiguate node embeddings, we propose a novel method, DisamGCL which exploits additional optimization guidance to enhance representation learning, particularly for nodes in ambiguous regions. DisamGCL identifies ambiguous nodes based on temporal inconsistency of predictions and introduces a disambiguation regularization by employing contrastive learning in a topology-aware manner. DisamGCL promotes discriminativity of node representations and can alleviating semantic mixing caused by message propagation, effectively addressing the ambiguity problem. Empirical results validate the efficiency of DisamGCL and highlight its potential to improve GNN performance in underrepresented graph regions.",
+        "authors": [
+          {
+            "name": "Tianxiang Zhao"
+          },
+          {
+            "name": "X. D. Zhang"
+          },
+          {
+            "name": "Suhang Wang"
+          }
+        ],
+        "venue": "ACM Web Conference (WWW)",
+        "year": 2024,
+        "citationcount": 13,
+        "url": "https://doi.org/10.1145/3589334.3645637",
+        "source": "OpenAlex"
+      },
+      {
+        "corpusid": 901383517,
+        "title": "Residual Attention Augmentation Graph Neural Network for Improved Node Classification",
+        "abstract": "Graph Neural Networks (GNNs) have emerged as a powerful tool for node representation learning within graph structures. However, designing a robust GNN architecture for node classification remains a challenge. This study introduces an efficient and straightforward Residual Attention Augmentation GNN (RAA-GNN) model, which incorporates an attention mechanism with skip connections to discerningly weigh node features and overcome the over-smoothing problem of GNNs. Additionally, a novel MixUp data augmentation method was developed to improve model training. The proposed approach was rigorously evaluated on various node classification benchmarks, encompassing both social and citation networks. The proposed method outperformed state-of-the-art techniques by achieving up to 1% accuracy improvement. Furthermore, when applied to the novel Twitch social network dataset, the proposed model yielded remarkably promising results. These findings provide valuable insights for researchers and practitioners working with graph-structured data.",
+        "authors": [
+          {
+            "name": "Muhammad Affan Abbas"
+          },
+          {
+            "name": "Waqar Ali"
+          },
+          {
+            "name": "Florentín Smarandache"
+          },
+          {
+            "name": "Sultan S. Alshamrani"
+          },
+          {
+            "name": "Muhammad Ahsan Raza"
+          },
+          {
+            "name": "Abdullah Alshehri"
+          },
+          {
+            "name": "Mubashir Ali"
+          }
+        ],
+        "venue": "Engineering Technology & Applied Science Research",
+        "year": 2024,
+        "citationcount": 4,
+        "url": "https://doi.org/10.48084/etasr.6844",
+        "source": "OpenAlex"
+      }
+    ],
+    "num_candidates": 5,
+    "warning": null,
+    "solutions": [
+      "Cơ sở dữ liệu hỗ trợ tốt, có đầy đủ tài liệu nền tảng để trích dẫn và đối sánh."
+    ]
+  },
+  "template_suitability": {
+    "is_supported": true,
+    "confidence": 10,
+    "selected_template": "gnn_graph_learning",
+    "reasoning": "Đề tài nghiên cứu về Mạng nơ-ron đồ thị (Graph Neural Networks) cho việc học biểu diễn và phân loại nút, khớp hoàn hảo với phạm vi và từ khóa của template gnn_graph_learning.",
+    "suggestions": "Thử nghiệm so sánh hiệu suất giữa các kiến trúc GCN, GAT và GraphSAGE trên các tập dữ liệu chuẩn như Cora, Citeseer hoặc PubMed."
+  },
+  "selected_template": "gnn_graph_learning"
+}

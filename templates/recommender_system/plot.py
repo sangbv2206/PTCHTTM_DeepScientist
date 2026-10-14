@@ -6,9 +6,7 @@ import matplotlib.pyplot as plt
 
 
 def main():
-    out_dir = "run_0"
-    if not os.path.exists(out_dir):
-        out_dir = "."
+    out_dir = "run_1" if os.path.exists("run_1") else ("run_0" if os.path.exists("run_0") else ".")
 
     history_path = os.path.join(out_dir, "history.json")
     final_info_path = os.path.join(out_dir, "final_info.json")

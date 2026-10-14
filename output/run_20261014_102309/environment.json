@@ -1,0 +1,13 @@
+{
+  "os_name": "Windows 10",
+  "python_version": "3.10.11",
+  "torch_version": "2.13.0+cpu",
+  "device": "cpu",
+  "cuda_available": false,
+  "device_name": "Intel64 Family 6 Model 154 Stepping 3, GenuineIntel",
+  "cpu_count": 16,
+  "ram_gb": 15.6,
+  "wall_time_sec": 20.13,
+  "start_timestamp": "2026-10-14 10:24:15",
+  "is_sandboxed": false
+}
