@@ -14,7 +14,19 @@ if hasattr(sys.stderr, "reconfigure"):
 
 
 class UniversalPlotter:
- 
+    """
+    Bộ vẽ đồ thị phổ quát thích ứng (Adaptive Universal Plotter) cho DeepScientist:
+    - NGUYÊN TẮC 1 (Tôn trọng đặc thù miền): Nếu template tự sinh được ảnh hợp lệ
+      (bất kể 1, 2, 4 hay 5 ảnh, ví dụ: ảnh phân tử, ảnh scatter diffusion, ảnh stroke),
+      hệ thống giữ nguyên 100%, tuyệt đối không can thiệp hay ghi đè.
+    - NGUYÊN TẮC 2 (Cứu cánh thích ứng linh hoạt - Dynamic Fallback):
+      Chỉ can thiệp khi template KHÔNG sinh được ảnh nào (bị crash hoặc thiếu plot.py).
+      Số lượng ảnh sinh ra hoàn toàn thích ứng theo dữ liệu thật:
+        * Chỉ có 1 metric kết quả -> Sinh đúng 1 biểu đồ so sánh.
+        * Có thêm lịch sử epoch (loss/acc) -> Sinh thêm 1 biểu đồ hội tụ.
+        * Có nhiều metric đối chiếu đa chiều -> Mới sinh thêm biểu đồ Trade-off Delta.
+    - 100% Zero-Hardcode: Tuyệt đối không chứa số ảo hay mảng số gán cứng.
+    """
 
     @staticmethod
     def _format_metric_name(k: str) -> str:
@@ -25,6 +37,33 @@ class UniversalPlotter:
         return name
 
     @classmethod
+    def ensure_grounded_figures(
+        cls,
+        exp_work_dir: str,
+        full_metrics: Dict[str, Dict[str, Any]],
+        user_topic: str = ""
+    ) -> List[str]:
+        """
+        Kiểm tra và bảo đảm hình ảnh cho bài báo:
+        - Nếu template đã sinh được ảnh hợp lệ (> 0 ảnh .png không rỗng), giữ nguyên 100%.
+        - Nếu template không có ảnh nào (0 ảnh), kích hoạt vẽ cứu cánh thích ứng theo dữ liệu.
+        """
+        existing = [
+            f for f in os.listdir(exp_work_dir)
+            if f.endswith(".png") and os.path.getsize(os.path.join(exp_work_dir, f)) > 1000
+        ]
+
+        if existing:
+            print(f"[UniversalPlotter] Template da sinh thanh cong {len(existing)} do thi dac thu mien ({existing}). Giu nguyen 100%, khong can thiep.")
+            return sorted(existing)
+
+        print("[UniversalPlotter] Template khong sinh duoc do thi nao (0 anh). Dang tu dong kich hoat bo ve thich ung theo log...")
+        generated_figs = cls.generate_grounded_figures(exp_work_dir, full_metrics, user_topic)
+        final_figs = sorted([f for f in os.listdir(exp_work_dir) if f.endswith(".png")])
+        print(f"[UniversalPlotter] Verified figure manifest ({len(final_figs)} figures): {final_figs}")
+        return final_figs
+
+    @classmethod
     def generate_grounded_figures(
         cls,
         exp_work_dir: str,
@@ -32,14 +71,12 @@ class UniversalPlotter:
         user_topic: str = ""
     ) -> List[str]:
         """
-        Sinh 2-3 đồ thị chuẩn học thuật trực tiếp từ full_metrics và history.json thực tế.
+        Sinh số lượng đồ thị hoàn toàn linh hoạt (1, 2, hoặc 3 ảnh) dựa trên bản chất dữ liệu thật.
         """
         os.makedirs(exp_work_dir, exist_ok=True)
         generated_figs = []
 
-        # -------------------------------------------------------------
         # 1. Thu thập dữ liệu lịch sử huấn luyện (history.json)
-        # -------------------------------------------------------------
         histories = {}
         for run_name in ["run_0", "run_1"]:
             h_path = os.path.join(exp_work_dir, run_name, "history.json")
@@ -52,105 +89,101 @@ class UniversalPlotter:
                 except Exception:
                     pass
 
-        # =============================================================
-        # FIGURE 1: Training & Validation Dynamics (Nếu có lịch sử epoch)
-        # =============================================================
-        fig1_path = os.path.join(exp_work_dir, "figure_1.png")
-        if not os.path.exists(fig1_path):
-            cls._plot_figure_1_dynamics(exp_work_dir, histories, full_metrics, user_topic)
-            if os.path.exists(fig1_path):
-                generated_figs.append("figure_1.png")
+        target_hist = histories.get("run_1") or histories.get("run_0") or {}
+        train_loss = target_hist.get("train_loss") or target_hist.get("loss") or []
 
-        # =============================================================
-        # FIGURE 2: Grounded Benchmark Comparison (Baseline vs Proposed)
-        # =============================================================
-        fig2_path = os.path.join(exp_work_dir, "figure_2.png")
-        if not os.path.exists(fig2_path):
-            cls._plot_figure_2_comparison(exp_work_dir, full_metrics, user_topic)
-            if os.path.exists(fig2_path):
-                generated_figs.append("figure_2.png")
+        # -----------------------------------------------------------------
+        # HÌNH A: Động học tối ưu hóa (Chỉ sinh nếu thực sự có lịch sử epoch)
+        # -----------------------------------------------------------------
+        has_epochs = bool(isinstance(train_loss, list) and len(train_loss) > 1)
+        if has_epochs:
+            fig_a_name = f"figure_{len(generated_figs) + 1}.png"
+            cls._plot_figure_dynamics(exp_work_dir, fig_a_name, target_hist, user_topic)
+            generated_figs.append(fig_a_name)
 
-        # =============================================================
-        # FIGURE 3: Metric Delta & Honest Trade-off Analysis
-        # =============================================================
-        fig3_path = os.path.join(exp_work_dir, "figure_3.png")
-        if not os.path.exists(fig3_path):
-            cls._plot_figure_3_deltas(exp_work_dir, full_metrics, user_topic)
-            if os.path.exists(fig3_path):
-                generated_figs.append("figure_3.png")
+        # -----------------------------------------------------------------
+        # HÌNH B: So sánh Benchmark định lượng (Sinh nếu có metrics)
+        # -----------------------------------------------------------------
+        if full_metrics:
+            fig_b_name = f"figure_{len(generated_figs) + 1}.png"
+            cls._plot_figure_comparison(exp_work_dir, fig_b_name, full_metrics, user_topic)
+            generated_figs.append(fig_b_name)
+
+        # -----------------------------------------------------------------
+        # HÌNH C: Phân tích Đánh đổi / Delta (Chỉ sinh khi có >= 2 models và >= 2 metrics)
+        # -----------------------------------------------------------------
+        models = list(full_metrics.keys())
+        can_plot_delta = False
+        if len(models) >= 2:
+            m0, m1 = models[0], models[1]
+            shared_metrics = [
+                k for k in full_metrics[m0]
+                if k in full_metrics[m1] and isinstance(full_metrics[m0][k], (int, float))
+            ]
+            if len(shared_metrics) >= 2:
+                can_plot_delta = True
+
+        if can_plot_delta:
+            fig_c_name = f"figure_{len(generated_figs) + 1}.png"
+            cls._plot_figure_deltas(exp_work_dir, fig_c_name, full_metrics, user_topic)
+            generated_figs.append(fig_c_name)
 
         return generated_figs
 
     @classmethod
-    def _plot_figure_1_dynamics(
+    def _plot_figure_dynamics(
         cls,
         exp_work_dir: str,
-        histories: Dict[str, Any],
-        full_metrics: Dict[str, Dict[str, Any]],
+        fig_name: str,
+        target_hist: Dict[str, Any],
         user_topic: str
     ):
-        target_hist = histories.get("run_1") or histories.get("run_0") or {}
         train_loss = target_hist.get("train_loss") or target_hist.get("loss") or []
         val_loss = target_hist.get("val_loss") or []
+        epochs = list(range(1, len(train_loss) + 1))
 
         plt.figure(figsize=(9, 4.2), dpi=300)
 
-        if train_loss:
-            epochs = list(range(1, len(train_loss) + 1))
-            plt.subplot(1, 2, 1)
-            plt.plot(epochs, train_loss, label="Training Loss", color="#1f77b4", lw=2)
-            if val_loss and len(val_loss) == len(train_loss):
-                plt.plot(epochs, val_loss, label="Validation Loss", color="#ff7f0e", lw=2, linestyle="--")
-            plt.title("Optimization Convergence Dynamics", fontsize=11, fontweight="bold")
-            plt.xlabel("Epoch / Iteration", fontsize=10)
-            plt.ylabel("Loss Criterion", fontsize=10)
+        plt.subplot(1, 2, 1)
+        plt.plot(epochs, train_loss, label="Training Loss", color="#1f77b4", lw=2)
+        if val_loss and len(val_loss) == len(train_loss):
+            plt.plot(epochs, val_loss, label="Validation Loss", color="#ff7f0e", lw=2, linestyle="--")
+        plt.title("Optimization Convergence Dynamics", fontsize=11, fontweight="bold")
+        plt.xlabel("Epoch / Iteration", fontsize=10)
+        plt.ylabel("Loss Criterion", fontsize=10)
+        plt.grid(True, linestyle=":", alpha=0.6)
+        plt.legend(frameon=True)
+
+        plt.subplot(1, 2, 2)
+        metric_keys = [k for k in target_hist.keys() if k not in ["train_loss", "val_loss", "loss", "predictions", "targets"]]
+        plotted_metric = False
+        for mk in metric_keys[:2]:
+            m_vals = target_hist[mk]
+            if isinstance(m_vals, list) and len(m_vals) == len(epochs) and all(isinstance(v, (int, float)) for v in m_vals):
+                plt.plot(epochs, m_vals, label=cls._format_metric_name(mk), lw=2)
+                plotted_metric = True
+        if plotted_metric:
+            plt.title("Empirical Metric Trajectory", fontsize=11, fontweight="bold")
+            plt.xlabel("Epoch", fontsize=10)
+            plt.ylabel("Metric Score", fontsize=10)
             plt.grid(True, linestyle=":", alpha=0.6)
             plt.legend(frameon=True)
-
-            # Subplot 2: Metric trajectory hoặc summary bar
-            plt.subplot(1, 2, 2)
-            metric_keys = [k for k in target_hist.keys() if k not in ["train_loss", "val_loss", "loss", "predictions", "targets"]]
-            plotted_metric = False
-            for mk in metric_keys[:2]:
-                m_vals = target_hist[mk]
-                if isinstance(m_vals, list) and len(m_vals) == len(epochs) and all(isinstance(v, (int, float)) for v in m_vals):
-                    plt.plot(epochs, m_vals, label=cls._format_metric_name(mk), lw=2)
-                    plotted_metric = True
-            if plotted_metric:
-                plt.title("Empirical Metric Trajectory", fontsize=11, fontweight="bold")
-                plt.xlabel("Epoch", fontsize=10)
-                plt.ylabel("Metric Score", fontsize=10)
-                plt.grid(True, linestyle=":", alpha=0.6)
-                plt.legend(frameon=True)
-            else:
-                # Nếu không có metric theo epoch, vẽ phân phối loss
-                plt.hist(train_loss, bins=15, color="#2ca02c", alpha=0.7, edgecolor="black")
-                plt.title("Empirical Loss Distribution", fontsize=11, fontweight="bold")
-                plt.xlabel("Loss Value", fontsize=10)
-                plt.ylabel("Frequency", fontsize=10)
-                plt.grid(True, linestyle=":", alpha=0.6)
         else:
-            # Fallback nếu không có history theo epoch (ví dụ: mô hình cây, random forest)
-            plt.subplot(1, 1, 1)
-            models = list(full_metrics.keys())
-            first_m = list(full_metrics[models[0]].keys())[0] if models and full_metrics[models[0]] else "Metric"
-            vals = [full_metrics[m].get(first_m, 0.0) for m in models]
-            bars = plt.bar(models, vals, color=["#4a90e2", "#2ecc71"][:len(models)], width=0.45, edgecolor="black")
-            plt.title(f"Empirical Evaluation Summary ({cls._format_metric_name(first_m)})", fontsize=12, fontweight="bold")
-            plt.ylabel(cls._format_metric_name(first_m), fontsize=11)
-            plt.grid(axis="y", linestyle=":", alpha=0.6)
-            for bar in bars:
-                y = bar.get_height()
-                plt.text(bar.get_x() + bar.get_width() / 2, y * 0.95, f"{y:.4f}", ha="center", va="top", color="white", fontweight="bold")
+            plt.hist(train_loss, bins=15, color="#2ca02c", alpha=0.7, edgecolor="black")
+            plt.title("Empirical Loss Distribution", fontsize=11, fontweight="bold")
+            plt.xlabel("Loss Value", fontsize=10)
+            plt.ylabel("Frequency", fontsize=10)
+            plt.grid(True, linestyle=":", alpha=0.6)
 
         plt.tight_layout()
-        plt.savefig(os.path.join(exp_work_dir, "figure_1.png"), dpi=300)
+        plt.savefig(os.path.join(exp_work_dir, fig_name), dpi=300)
         plt.close()
 
     @classmethod
-    def _plot_figure_2_comparison(
+    def _plot_figure_comparison(
         cls,
         exp_work_dir: str,
+        fig_name: str,
         full_metrics: Dict[str, Dict[str, Any]],
         user_topic: str
     ):
@@ -158,7 +191,6 @@ class UniversalPlotter:
         if not models:
             return
 
-        # Lấy danh sách metrics chung
         all_keys = []
         for m in models:
             for k, v in full_metrics[m].items():
@@ -168,7 +200,6 @@ class UniversalPlotter:
         if not all_keys:
             return
 
-        # Chọn tối đa 3-4 metrics quan trọng nhất để vẽ bar plot
         selected_keys = all_keys[:4]
         n_metrics = len(selected_keys)
         n_models = len(models)
@@ -203,13 +234,14 @@ class UniversalPlotter:
         ax.grid(axis="y", linestyle=":", alpha=0.6)
 
         plt.tight_layout()
-        plt.savefig(os.path.join(exp_work_dir, "figure_2.png"), dpi=300)
+        plt.savefig(os.path.join(exp_work_dir, fig_name), dpi=300)
         plt.close()
 
     @classmethod
-    def _plot_figure_3_deltas(
+    def _plot_figure_deltas(
         cls,
         exp_work_dir: str,
+        fig_name: str,
         full_metrics: Dict[str, Dict[str, Any]],
         user_topic: str
     ):
@@ -222,7 +254,10 @@ class UniversalPlotter:
         b_metrics = full_metrics[baseline_name]
         p_metrics = full_metrics[proposed_name]
 
-        common_keys = [k for k in b_metrics if k in p_metrics and isinstance(b_metrics[k], (int, float)) and isinstance(p_metrics[k], (int, float))]
+        common_keys = [
+            k for k in b_metrics
+            if k in p_metrics and isinstance(b_metrics[k], (int, float)) and isinstance(p_metrics[k], (int, float))
+        ]
         if not common_keys:
             return
 
@@ -237,7 +272,6 @@ class UniversalPlotter:
             else:
                 pct = (p_val - b_val) * 100.0
 
-            # Đối với metric mà lower-is-better (loss, asmd, brier, error)
             is_lower_better = any(w in k.lower() for w in ["loss", "asmd", "brier", "mse", "mae", "error"])
             is_improvement = (pct < 0) if is_lower_better else (pct > 0)
 
@@ -259,25 +293,5 @@ class UniversalPlotter:
             ax.text(xpos, bar.get_y() + bar.get_height() / 2, f"{w:+.1f}%", va="center", ha=ha, fontsize=8.5, fontweight="bold")
 
         plt.tight_layout()
-        plt.savefig(os.path.join(exp_work_dir, "figure_3.png"), dpi=300)
+        plt.savefig(os.path.join(exp_work_dir, fig_name), dpi=300)
         plt.close()
-
-    @classmethod
-    def ensure_grounded_figures(
-        cls,
-        exp_work_dir: str,
-        full_metrics: Dict[str, Dict[str, Any]],
-        user_topic: str = ""
-    ) -> List[str]:
-        """
-        Kiểm tra và sinh bổ sung nếu thiếu hình vẽ, đảm bảo tối thiểu figure_1.png và figure_2.png
-        luôn tồn tại và gắn chặt với dữ liệu thực nghiệm thực tế.
-        """
-        existing = [f for f in os.listdir(exp_work_dir) if f.endswith(".png")]
-        if "figure_1.png" not in existing or "figure_2.png" not in existing:
-            print("[UniversalPlotter] Phát hiện thiếu hoặc lỗi đồ thị thực nghiệm. Đang tự động sinh biểu đồ chuẩn hóa từ log thực tế...")
-            cls.generate_grounded_figures(exp_work_dir, full_metrics, user_topic)
-
-        final_figs = sorted([f for f in os.listdir(exp_work_dir) if f.endswith(".png")])
-        print(f"[UniversalPlotter] Verified figure manifest ({len(final_figs)} figures): {final_figs}")
-        return final_figs
