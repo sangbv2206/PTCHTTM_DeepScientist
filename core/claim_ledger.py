@@ -210,6 +210,7 @@ class ClaimLedger:
         tbl_env = "table*" if is_wide else "table"
         tbl_pos = "[t]" if is_wide else "[htbp]"
         target_width = r"\textwidth" if is_wide else r"\columnwidth"
+        col_spec = "l" + "c" * len(all_metrics_keys)
         latex = [
             f"\\begin{{{tbl_env}}}{tbl_pos}",
             "\\centering",
