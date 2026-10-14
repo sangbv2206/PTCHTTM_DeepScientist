@@ -162,31 +162,14 @@ class DeepScientistPipeline:
         # -------------------------------------------------------------
         print("\n>>> GIAI ĐOẠN 1: KHAI PHÁ ĐỒ THỊ TRI THỨC TOÀN CỤC (ResearchAgent Global Graph)")
 
-        # Lấy top papers kèm scores để có thể kiểm tra relevance của seed paper và thu thập đủ 35+ bài tham khảo
-        matched_papers_with_scores = self.knowledge_store.search_target_papers_with_scores(topic, top_k=50)
-        matched_papers = [p for _, p in matched_papers_with_scores]
-        top_score = matched_papers_with_scores[0][0] if matched_papers_with_scores else 0.0
-
-        # Ngưỡng điểm relevance tối thiểu để tin dùng bài từ offline corpus làm seed paper.
-        # Nếu top score thấp hơn ngưỡng → bài top-1 chỉ khớp từ chung, không phải topic thực sự
-        # → kích hoạt external retrieval dù coverage status là MODERATE.
-        SEED_RELEVANCE_THRESHOLD = 40.0
-
-        # Log chi tiết top-5 papers với scores để dễ debug
-        print(f"[Stage 1] Ket qua tim kiem offline corpus (top-5 papers, score giam dan):")
-        for i, (sc, pp) in enumerate(matched_papers_with_scores[:5]):
-            print(f"  [{i+1}] score={sc:6.1f}  {pp.get('title', 'N/A')[:75]}")
-        sys.stdout.flush()
-
-        # Luôn ưu tiên thu thập bài báo mới nhất trực tiếp từ OpenAlex / arXiv nếu ở chế độ online (hoặc dữ liệu offline không đủ)
-        use_external = getattr(self, "online_search", True) or offline_insufficient or weak_seed or not matched_papers
-        
+        use_external = getattr(self, "online_search", True)
         target_paper = None
         related_papers = []
         discovered_entities = []
 
+        # 1. Ưu tiên hàng đầu: Kết nối mạng OpenAlex / arXiv để lấy bài báo thực tế mới nhất
         if use_external:
-            print("[PIPELINE] KICH HOAT CHE DO 'DYNAMIC EXTERNAL RETRIEVAL' (Khai pha bai bao khoa hoc thuc te tu OpenAlex/arXiv)...")
+            print("[PIPELINE] ƯU TIÊN KẾT NỐI HỌC THUẬT QUỐC TẾ (Online-First: OpenAlex & arXiv API)...")
             try:
                 enrichment_result = self.knowledge_store.enrich_with_external_papers(
                     topic=topic,
@@ -198,15 +181,21 @@ class DeepScientistPipeline:
                     related_papers = enrichment_result["references"]
                     discovered_entities = enrichment_result["entities"]
                     source_name = enrichment_result.get("source", "OpenAlex/arXiv")
-                    print(f"[PIPELINE] -> Da nap thanh cong bai bao hat giong THUC TE tu {source_name}: '{target_paper.get('title')}' ({target_paper.get('year')})")
-                    print(f"[PIPELINE] -> Thu thap duoc {len(related_papers)} tai lieu tham khao truc tiep tu mang!")
+                    print(f"[PIPELINE] -> KẾT NỐI ONLINE THÀNH CÔNG! Đã nạp bài báo hạt giống: '{target_paper.get('title')}' ({target_paper.get('year')}) từ {source_name}")
+                    print(f"[PIPELINE] -> Thu thập được {len(related_papers)} tài liệu tham khảo thực tế trực tiếp từ mạng!")
             except Exception as e:
-                print(f"[PIPELINE] Loi ket noi external papers: {e}")
+                print(f"[PIPELINE] Cảnh báo lỗi kết nối mạng (Network Error): {e}")
 
-        # Fallback offline nếu online gặp lỗi hoặc không tìm thấy bài
+        # 2. Phương án dự phòng (Fallback): Chỉ khi mất kết nối mạng hoặc chạy chế độ --offline mới dùng kho offline
         if not target_paper:
+            print("[PIPELINE] Không có kết nối mạng hoặc không tìm thấy bài online. KÍCH HOẠT PHƯƠNG ÁN NGOẠI TUYẾN (Offline Dataset Fallback)...")
+            matched_papers_with_scores = self.knowledge_store.search_target_papers_with_scores(topic, top_k=50)
+            matched_papers = [p for _, p in matched_papers_with_scores]
+            if matched_papers_with_scores:
+                print(f"[PIPELINE] Kết quả tìm kiếm trong kho offline (top 5 bài phù hợp nhất):")
+                for i, (sc, pp) in enumerate(matched_papers_with_scores[:5]):
+                    print(f"  [{i+1}] score={sc:6.1f}  {pp.get('title', 'N/A')[:75]}")
             if matched_papers:
-                print("[PIPELINE] Su dung kho tri thuc offline lam phuong an thay the...")
                 target_paper = matched_papers[0]
                 direct_refs = self.knowledge_store.get_related_references_for_paper(target_paper, top_k=25)
                 seen_cids = {target_paper.get("corpusid")}
