@@ -13,14 +13,28 @@ class TemplateManager:
     - Hỗ trợ định tuyến thông minh song ngữ (Tiếng Việt & Tiếng Anh) qua Semantic LLM Router & Heuristic Keyword Matcher.
     """
 
+    EXCLUDED_TEMPLATES = {
+        "mobilenetV3",
+        "earthquake-prediction",
+        "tensorf",
+        "MACE",
+        "sketch_rnn",
+        "probes",
+        "seir",
+        "gnn_graph_learning",
+        "recommender_system",
+    }
+
     def __init__(self, custom_templates_dir: Optional[str] = None):
         base_dir = os.path.dirname(os.path.abspath(__file__))
         self.templates_dir = custom_templates_dir or base_dir
 
     def list_available_templates(self) -> List[str]:
-        """Liệt kê tất cả các template đang có trong thư mục templates nội bộ."""
+        """Liệt kê tất cả các template đang hoạt động (đã lọc bỏ các template thử nghiệm/kém chất lượng)."""
         templates = []
         for name in os.listdir(self.templates_dir):
+            if name in self.EXCLUDED_TEMPLATES:
+                continue
             p = os.path.join(self.templates_dir, name)
             if os.path.isdir(p) and os.path.exists(os.path.join(p, "experiment.py")):
                 templates.append(name)
@@ -84,17 +98,20 @@ class TemplateManager:
         return None
 
     def copy_template_to_dir(self, template_name: str, target_dir: str):
-        """Sao chép toàn bộ template vào thư mục thực nghiệm để tiến hành train."""
+        """Sao chép toàn bộ template vào thư mục thực nghiệm để tiến hành train (bỏ qua thư mục rác/cache)."""
         src = self.get_template_path(template_name)
         if not src:
             raise FileNotFoundError(f"Template '{template_name}' not found!")
 
         os.makedirs(target_dir, exist_ok=True)
+        IGNORE_ITEMS = {"latex", "__pycache__", ".git"}
         for item in os.listdir(src):
+            if item in IGNORE_ITEMS:
+                continue
             s_item = os.path.join(src, item)
             d_item = os.path.join(target_dir, item)
             if os.path.isdir(s_item):
-                shutil.copytree(s_item, d_item, dirs_exist_ok=True)
+                shutil.copytree(s_item, d_item, dirs_exist_ok=True, ignore=shutil.ignore_patterns("__pycache__", "*.pyc", "latex"))
             else:
                 shutil.copy2(s_item, d_item)
 
@@ -136,14 +153,15 @@ TASK:
 1. Understand the core scientific task and machine learning domain of the research topic.
 2. Select the BEST matching template name strictly from the available templates list above.
    - For health impact, clinical trials, cohort studies, hazard analysis, biomass smoke exposure, or causal questions -> select "causal_trial_emulation".
-   - For image recognition / CNN / vision -> select "mobilenetV3".
    - For recommender / user-item ranking -> select "recommender_system".
    - For reinforcement learning / control / robotics / decision making -> select "reinforcement_learning".
    - For graph neural networks / network topology -> select "gnn_graph_learning".
    - For sequential time-series / load forecasting / weather / sensors -> select "time_series_forecasting".
    - For language / LLM / NLP / text -> select "nanoGPT".
+   - For generative image diffusion / score-based models -> select "2d_diffusion".
+   - For mathematical learning dynamics / generalization / grokking -> select "grokking".
 3. Assign a confidence score from 1 to 10 (1 = completely unrelated/unsupported, 10 = perfect match).
-4. If confidence < 6 or if the topic is completely outside the scope of all available templates (e.g. quantum hardware, pure physical simulation), set is_supported = false.
+4. If confidence < 6 or if the topic is outside the scope of all available templates (e.g. general computer vision, image classification, quantum hardware, pure physical simulation), set is_supported = false. The pipeline will automatically route to Autonomous Zero-Shot Coding (CoderAgent).
 5. Provide concise reasoning and suggestions in Vietnamese.
 
 Respond strictly in JSON format:
@@ -264,8 +282,8 @@ TEMPLATE_METADATA = {
         "domain": "Time-Series Forecasting & Sequential Regression",
         "description": "Temporal recurrent neural networks (GRU/LSTM/Linear), multi-step sequential load, weather, and sensor prediction.",
         "keywords": [
-            "time series", "timeseries", "forecast", "forecasting", "predict", "prediction", "energy", "consumption", "electricity", "household", "power", "load", "sensor", "temporal", "regression", "smart home", "smart grid", "weather",
-            "chuỗi thời gian", "dự báo", "dự đoán", "tiêu thụ điện", "điện năng", "phụ tải", "thời tiết", "mực nước"
+            "time series", "timeseries", "forecast", "forecasting", "predict", "prediction", "flood", "flood risk", "meteorological", "terrain", "hydrological", "energy", "consumption", "electricity", "household", "power", "load", "sensor", "temporal", "regression", "smart home", "smart grid", "weather",
+            "chuỗi thời gian", "dự báo", "dự đoán", "lũ lụt", "ngập lụt", "thủy văn", "tiêu thụ điện", "điện năng", "phụ tải", "thời tiết", "mực nước"
         ]
     },
     "seir": {
@@ -354,6 +372,8 @@ TEMPLATE_SCORING_RULES: Dict[str, list] = {
     ],
     "time_series_forecasting": [
         ("time series", 25.0), ("timeseries", 25.0), ("chuỗi thời gian", 25.0),
+        ("flood", 25.0), ("flood risk", 30.0), ("meteorological", 20.0), ("hydrological", 25.0),
+        ("lũ lụt", 30.0), ("ngập lụt", 25.0), ("thủy văn", 25.0), ("mực nước", 20.0),
         ("forecasting", 18.0), ("forecast", 15.0), ("dự báo", 15.0),
         ("power consumption", 20.0), ("energy consumption", 20.0), ("electricity consumption", 20.0),
         ("tiêu thụ điện", 20.0), ("phụ tải điện", 20.0), ("smart grid", 18.0),

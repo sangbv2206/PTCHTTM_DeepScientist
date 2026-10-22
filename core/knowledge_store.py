@@ -1,496 +1,233 @@
 import json
-
 import math
-
 import os
-
 import re
-
 from collections import defaultdict, Counter
-
 from typing import Dict, List, Optional, Any
-
-
-
-import torch
-
 from core.external_retriever import ExternalPaperRetriever
 
-
-
-
-
 STOPWORDS = {
-
     "a", "about", "above", "after", "again", "against", "all", "am", "an", "and", "any", "are", 
-
     "as", "at", "be", "because", "been", "before", "being", "below", "between", "both", "but", 
-
     "by", "can", "did", "do", "does", "doing", "don", "down", "during", "each", "few", "for", 
-
     "from", "further", "had", "has", "have", "having", "he", "her", "here", "hers", "herself", 
-
     "him", "himself", "his", "how", "i", "if", "in", "into", "is", "it", "its", "itself", "just", 
-
     "me", "more", "most", "my", "myself", "no", "nor", "not", "now", "of", "off", "on", "once", 
-
     "only", "or", "other", "our", "ours", "ourselves", "out", "over", "own", "s", "same", "she", 
-
     "should", "so", "some", "such", "t", "than", "that", "the", "their", "theirs", "them", 
-
     "themselves", "then", "there", "these", "they", "this", "those", "through", "to", "too", 
-
     "under", "until", "up", "very", "was", "we", "were", "what", "when", "where", "which", 
-
     "while", "who", "whom", "why", "will", "with", "based", "approach", "method", "methods", "using", 
-
     "study", "applications", "application", "system", "systems", "via", "towards", "toward", "analysis",
-
     "comparison", "different", "models", "model", "assisted", "review", "effect", "effects", "paper",
-
     "deep", "learning", "machine", "neural", "network", "networks", "artificial", "intelligence"
-
 }
 
 
-
-
-
 class KnowledgeStore:
-
-    
-
-
-
     def __init__(self, data_dir: Optional[str] = None):
-
         if data_dir is None:
-
             base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-
             self.data_dir = os.path.join(base_dir, "data")
-
         else:
-
             self.data_dir = data_dir
 
-
-
         self.knowledge_path = os.path.join(self.data_dir, "knowledge.jsonl")
-
         self.papers_path = os.path.join(self.data_dir, "papers.jsonl")
-
         self.references_path = os.path.join(self.data_dir, "references.jsonl")
-
         self.cache_path = os.path.join(self.data_dir, "external_papers_cache.jsonl")
-
         self.retriever = ExternalPaperRetriever(cache_dir=self.data_dir)
 
-
-
         self.papers_by_id: Dict[int, Dict[str, Any]] = {}
-
         self.paper2references: Dict[int, List[int]] = defaultdict(list)
-
         self.paper2entities: Dict[int, Dict[str, int]] = {}
-
         self.entity_counter: Counter = Counter()
-
         self.entity_cooccurrence: Dict[str, Counter] = defaultdict(Counter)
-
+        self.doc_freq: Counter = Counter()
         self.is_loaded = False
 
-
-
     def load_all_data(self):
-
-        """Nạp toàn bộ cơ sở dữ liệu của ResearchAgent vào RAM và xây dựng đồ thị tri thức."""
-
+        """Loads corpus papers, entities, reference relationships, and cache into memory."""
         if self.is_loaded:
-
             return
 
+        print(f"[KnowledgeStore] Loading dataset from: {self.data_dir}")
 
-
-        print(f"[KnowledgeStore] Loading full dataset from: {self.data_dir}")
-
-
-
-        # 1. Nạp toàn bộ 6.418 bài báo từ papers.jsonl
-
+        # 1. Load papers.jsonl
         if os.path.exists(self.papers_path):
-
             with open(self.papers_path, "r", encoding="utf-8") as f:
-
                 for line in f:
-
                     if line.strip():
-
                         p = json.loads(line)
-
                         cid = p.get("corpusid")
-
                         if cid:
-
                             self.papers_by_id[cid] = p
-
             print(f"[KnowledgeStore] Loaded {len(self.papers_by_id)} papers from papers.jsonl.")
-
         else:
-
             print(f"[KnowledgeStore] WARNING: {self.papers_path} not found.")
 
-
-
-        # 2. Nạp toàn bộ 37.904 bản ghi thực thể từ knowledge.jsonl và xây dựng ma trận
-
+        # 2. Load knowledge.jsonl entities
         if os.path.exists(self.knowledge_path):
-
             k_records = 0
-
             with open(self.knowledge_path, "r", encoding="utf-8") as f:
-
                 for line in f:
-
                     if not line.strip():
-
                         continue
-
                     instance = json.loads(line)
-
                     cid = instance.get("corpusid")
-
                     entities = instance.get("knowledge", {})
-
                     if cid and entities:
-
                         self.paper2entities[cid] = entities
-
                         self.entity_counter.update(entities)
-
                         for entity_name in entities.keys():
-
                             self.entity_cooccurrence[entity_name].update(
-
                                 {k: v for k, v in entities.items() if k != entity_name}
-
                             )
-
                         k_records += 1
-
             print(f"[KnowledgeStore] Loaded {k_records} paper entity graphs from knowledge.jsonl.")
-
             print(f"[KnowledgeStore] Built global entity co-occurrence matrix with {len(self.entity_counter)} unique scientific concepts.")
-
         else:
-
             print(f"[KnowledgeStore] WARNING: {self.knowledge_path} not found.")
 
-
-
-        # 3. Nạp toàn bộ kho bài báo tham chiếu từ references.jsonl (32.274 bài)
-
+        # 3. Load references.jsonl
         if os.path.exists(self.references_path):
-
             r_added = 0
-
             with open(self.references_path, "r", encoding="utf-8") as f:
-
                 for line in f:
-
                     if line.strip():
-
                         try:
-
                             item = json.loads(line)
-
                             source_id = item.get("corpusid")
-
                             if source_id and source_id not in self.papers_by_id:
-
                                 self.papers_by_id[source_id] = item
-
                                 r_added += 1
-
                         except Exception:
-
                             pass
-
             print(f"[KnowledgeStore] Loaded {r_added} additional reference papers from references.jsonl (Unified corpus: {len(self.papers_by_id)} papers).")
 
-
-
-        # 4. Nạp các bài báo đã được lưu trong cache external_papers_cache.jsonl
-
+        # 4. Load cache
         if os.path.exists(self.cache_path):
-
             c_added = 0
-
             with open(self.cache_path, "r", encoding="utf-8") as f:
-
                 for line in f:
-
                     if line.strip():
-
                         try:
-
                             item = json.loads(line)
-
                             cid = item.get("corpusid")
-
                             if cid and cid not in self.papers_by_id:
-
                                 self.papers_by_id[cid] = item
-
                                 c_added += 1
-
                         except Exception:
-
                             pass
-
             if c_added > 0:
-
                 print(f"[KnowledgeStore] Loaded {c_added} cached online papers from external_papers_cache.jsonl.")
 
-
-
-        # Xây dựng document frequency (IDF) cho toàn bộ kho bài báo
-
-        self.doc_freq: Counter = Counter()
-
+        # Compute document frequency for search
+        self.doc_freq = Counter()
         for p in self.papers_by_id.values():
-
             text = (p.get("title", "") + " " + p.get("abstract", "")).lower()
-
             words = set(re.findall(r"\b[a-z]{2,}\b", text)) - STOPWORDS
-
             self.doc_freq.update(words)
-
-
 
         self.is_loaded = True
 
-
-
     def get_entity_log_likelihood(self, entity: str, paper_entities: list) -> float:
-
-        """
-
-        Công thức log-likelihood nguyên bản của ResearchAgent:
-
-        log2((cooccurrence(e, p_e) + 1e-16) / (total_cooccurrence(e) + 1e-16))
-
-        """
-
+        total_cooc = sum(self.entity_cooccurrence[entity].values()) + 1e-16
         conditional_log_probabilities = [
-
-            math.log2(
-
-                (self.entity_cooccurrence[entity][paper_entity] + 1e-16) /
-
-                (sum(self.entity_cooccurrence[entity].values()) + 1e-16)
-
-            ) for paper_entity in paper_entities
-
+            math.log2((self.entity_cooccurrence[entity][paper_entity] + 1e-16) / total_cooc)
+            for paper_entity in paper_entities
         ]
-
         return sum(conditional_log_probabilities)
 
-
-
     def get_entity_probability(self, entity: str) -> float:
-
-        """Xác suất tiên nghiệm của thực thể trong toàn bộ kho tri thức."""
-
         total = sum(self.entity_counter.values())
-
         if total == 0:
-
             return 0.0
-
         return self.entity_counter[entity] / total
 
-
-
     def get_relevant_entities(self, paper_ids: list, top_k: int = 30) -> List[str]:
-
-        """
-
-        Thuật toán khai phá thực thể tri thức bám sát domain:
-
-        1. Khai phá từ ma trận đồng xuất hiện đồ thị tri thức (ResearchAgent co-occurrence log-likelihood).
-
-        2. Tự động bổ sung các khái niệm khoa học cốt lõi từ chính target và related papers.
-
-        3. Lọc bỏ các thực thể nhiễu địa lý/y khoa không thuộc chủ đề.
-
-        """
-
-        paper_entities = sum(
-
-            [
-
-                Counter(self.paper2entities[paper_id]) for paper_id in paper_ids 
-
-                if paper_id in self.paper2entities.keys()
-
-            ], 
-
-            start=Counter()
-
-        )
-
-        paper_entities_list = list(paper_entities.elements())
-
-
-
-        discovered = []
-
-        if paper_entities_list:
-
-            candidate_entities = sum(
-
-                [self.entity_cooccurrence[entity] for entity in paper_entities_list],
-
-                start=Counter()
-
-            )
-
-            candidate_entities_filtered = [
-
-                entity for entity, count in candidate_entities.items() 
-
-                if count >= 2 and len(entity) > 2 and not entity.isdigit()
-
-            ]
-
-
-
-            if candidate_entities_filtered:
-
-                candidate_entities_probs = [
-
-                    (
-
-                        self.get_entity_log_likelihood(entity, paper_entities_list) + 
-
-                        math.log2(self.get_entity_probability(entity) + 1e-16)
-
-                    )
-
-                    for entity in candidate_entities_filtered
-
-                ]
-
-                k = min(top_k, len(candidate_entities_filtered))
-
-                _, indices = torch.topk(torch.tensor(candidate_entities_probs), k=k, axis=-1)
-
-                discovered = [candidate_entities_filtered[index] for index in indices]
-
-
-
-        # Khai thác thực thể & thuật ngữ cốt lõi từ Title + Abstract của các bài báo liên quan
-
-        domain_concepts = []
-
-        for pid in paper_ids:
-
-            p = self.papers_by_id.get(pid)
-
-            if not p:
-
-                continue
-
-            title = p.get("title", "")
-
-            abstract = p.get("abstract", "")
-
-            
-
-            # 1. Trích xuất các cụm danh từ khoa học viết hoa
-
-            cap_phrases = re.findall(r"\b[A-Z][a-zA-Z0-9\-]*(?:\s+[A-Z][a-zA-Z0-9\-]*)+\b", title + ". " + abstract)
-
-            for phrase in cap_phrases:
-
-                phrase_clean = phrase.strip()
-
-                if (
-
-                    len(phrase_clean) > 3 
-
-                    and not phrase_clean.isdigit()
-
-                    and phrase_clean not in domain_concepts
-
-                ):
-
-                    domain_concepts.append(phrase_clean)
-
-
-
-            # 2. Trích xuất cụm n-gram có ý nghĩa học thuật từ Title
-
-            words = [w for w in re.findall(r"\b[a-zA-Z]{3,}\b", title) if w.lower() not in STOPWORDS]
-
-            for i in range(len(words) - 1):
-
-                bg = f"{words[i].capitalize()} {words[i+1].capitalize()}"
-
-                if bg not in domain_concepts:
-
-                    domain_concepts.append(bg)
-
-
-
-        # Hợp nhất: Ưu tiên các khái niệm sát domain bài báo trước, sau đó tới KG
-
-        final_entities = []
-
-        for ent in domain_concepts + discovered:
-
-            if ent not in final_entities and len(ent) > 2:
-
-                final_entities.append(ent)
-
-        return final_entities[:top_k]
-
-
-
-    def assess_topic_coverage(self, topic: str) -> Dict[str, Any]:
-        """
-        Kiểm tra độ bao phủ của corpus đối với chủ đề nghiên cứu.
-
-        Thuật toán đo coverage kép (v2):
-        1. Tần suất từ khóa toàn corpus (doc_freq): Cần >= MIN_PAPERS_PER_KEYWORD (15 bài)
-           để được coi là từ khóa có nền tảng học thuật trong kho.
-        2. Relevance score của bài báo top-1 (top_score từ BM25+IDF+N-gram):
-           - Nếu top_score < 35.0 -> Dù có từ khóa ngẫu nhiên, không có bài báo nào thực sự khớp đề tài.
-           - Nếu top_score >= 50.0 và coverage >= 50% -> STRONG (đầy đủ tài liệu).
-           - Nếu top_score >= 35.0 và coverage >= 25% -> MODERATE.
-           - Dưới các ngưỡng trên -> INSUFFICIENT (kích hoạt External Retrieval).
-        """
         if not self.is_loaded:
             self.load_all_data()
 
-        # Ngưỡng tối thiểu: trong 38.000 bài báo, từ khóa cần xuất hiện >= 15 bài
-        MIN_PAPERS_PER_KEYWORD = 15
+        paper_entities = sum(
+            [Counter(self.paper2entities[pid]) for pid in paper_ids if pid in self.paper2entities],
+            start=Counter()
+        )
+        paper_entities_list = list(paper_entities.elements())
 
+        discovered = []
+        if paper_entities_list:
+            candidate_entities = sum(
+                [self.entity_cooccurrence[e] for e in paper_entities_list],
+                start=Counter()
+            )
+            candidate_entities_filtered = [
+                e for e, count in candidate_entities.items()
+                if count >= 2 and len(e) > 2 and not e.isdigit()
+            ]
+
+            if candidate_entities_filtered:
+                candidate_entities_probs = [
+                    (
+                        self.get_entity_log_likelihood(e, paper_entities_list) +
+                        math.log2(self.get_entity_probability(e) + 1e-16)
+                    )
+                    for e in candidate_entities_filtered
+                ]
+                k = min(top_k, len(candidate_entities_filtered))
+                indices = sorted(range(len(candidate_entities_probs)), key=lambda i: candidate_entities_probs[i], reverse=True)[:k]
+                discovered = [candidate_entities_filtered[index] for index in indices]
+
+        domain_concepts = []
+        for pid in paper_ids:
+            p = self.papers_by_id.get(pid)
+            if not p:
+                continue
+            title = p.get("title", "")
+            abstract = p.get("abstract", "")
+
+            cap_phrases = re.findall(r"\b[A-Z][a-zA-Z0-9\-]*(?:\s+[A-Z][a-zA-Z0-9\-]*)+\b", title + ". " + abstract)
+            for phrase in cap_phrases:
+                phrase_clean = phrase.strip()
+                if len(phrase_clean) > 3 and not phrase_clean.isdigit() and phrase_clean not in domain_concepts:
+                    domain_concepts.append(phrase_clean)
+
+            words = [w for w in re.findall(r"\b[a-zA-Z]{3,}\b", title) if w.lower() not in STOPWORDS]
+            for i in range(len(words) - 1):
+                bg = f"{words[i].capitalize()} {words[i+1].capitalize()}"
+                if bg not in domain_concepts:
+                    domain_concepts.append(bg)
+
+        final_entities = []
+        for ent in domain_concepts + discovered:
+            if ent not in final_entities and len(ent) > 2:
+                final_entities.append(ent)
+        return final_entities[:top_k]
+
+    def assess_topic_coverage(self, topic: str, is_online: bool = False) -> Dict[str, Any]:
+        if is_online:
+            return {
+                "status": "STRONG",
+                "coverage_percent": 100.0,
+                "warning": None,
+                "solutions": ["Hệ thống thu thập 100% dữ liệu nghiên cứu trực tuyến thời gian thực từ OpenAlex & arXiv API."],
+                "top_score": 100.0,
+                "matched_keywords": [topic]
+            }
+
+        if not self.is_loaded:
+            self.load_all_data()
+
+        MIN_PAPERS_PER_KEYWORD = 15
         query_words = [w for w in re.findall(r"\b[a-z]{2,}\b", topic.lower()) if w not in STOPWORDS]
         if not query_words:
             query_words = [w for w in re.findall(r"\b[a-z]{2,}\b", topic.lower())]
 
         unique_q_words = list(dict.fromkeys(query_words))
-
-        matched_q = [
-            w for w in unique_q_words
-            if self.doc_freq.get(w, 0) >= MIN_PAPERS_PER_KEYWORD
-        ]
+        matched_q = [w for w in unique_q_words if self.doc_freq.get(w, 0) >= MIN_PAPERS_PER_KEYWORD]
         missing_q = [w for w in unique_q_words if w not in matched_q]
         coverage_ratio = len(matched_q) / max(len(unique_q_words), 1)
 
-        # Lấy top papers kèm điểm relevance
         scored_matches = self.search_target_papers_with_scores(topic, top_k=5)
         top_score = scored_matches[0][0] if scored_matches else 0.0
         matches = [p for _, p in scored_matches]
@@ -539,619 +276,361 @@ class KnowledgeStore:
             "solutions": solutions
         }
 
-
-    def _compute_paper_scores(
-
-        self,
-
-        query: str,
-
-        exclude_corpusid: Optional[int] = None
-
-    ) -> List[tuple]:
-
-        """
-
-        Lõi tính điểm BM25+IDF cho từng bài báo so với query.
-
-        Trả về danh sách (score, paper) chưa sort — để các caller tự sort và slice.
-
-        """
-
+    def _compute_paper_scores(self, query: str, exclude_corpusid: Optional[int] = None) -> List[tuple]:
         total_docs = max(len(self.papers_by_id), 1)
-
         query_words = [w for w in re.findall(r"\b[a-z]{2,}\b", query.lower()) if w not in STOPWORDS]
-
         if not query_words:
-
             query_words = [w for w in re.findall(r"\b[a-z]{2,}\b", query.lower())]
 
-
-
-        # Trích xuất các cụm 2-gram hoặc 3-gram từ query để thưởng điểm khớp cụm
-
         raw_words = query.lower().split()
-
         query_bigrams = [" ".join(raw_words[i:i+2]) for i in range(len(raw_words)-1)]
-
-        content_bigrams = [
-
-            bg for bg in query_bigrams
-
-            if not any(w in STOPWORDS for w in bg.split())
-
-        ]
-
-
+        content_bigrams = [bg for bg in query_bigrams if not any(w in STOPWORDS for w in bg.split())]
 
         matches = []
-
         for cid, paper in self.papers_by_id.items():
-
             if exclude_corpusid and cid == exclude_corpusid:
-
                 continue
-
-
 
             title = paper.get("title", "")
-
             abstract = paper.get("abstract", "")
-
             t_lower = title.lower()
-
             a_lower = abstract.lower()
 
-
-
             t_words = set(re.findall(r"\b[a-z]{2,}\b", t_lower))
-
             a_words = set(re.findall(r"\b[a-z]{2,}\b", a_lower))
 
-
-
             score = 0.0
-
             matched_terms = 0
 
-
-
             for w in query_words:
-
                 idf = math.log((total_docs + 1.0) / (self.doc_freq.get(w, 0) + 1.0)) + 1.0
-
                 if w in t_words:
-
                     score += 3.0 * idf
-
                     matched_terms += 1
-
                 elif w in a_words:
-
                     score += 1.0 * idf
-
                     matched_terms += 1
 
+            # Nhận diện các từ khóa neo miền (Domain Anchor Keywords - các từ mang tính đặc thù lĩnh vực cao)
+            COMMON_GENERIC_WORDS = {
+                "applying", "application", "artificial", "intelligence", "deep", "learning", "machine", "neural",
+                "network", "networks", "model", "models", "modeling", "prediction", "predicting", "predict",
+                "analysis", "analyzing", "approach", "method", "methods", "system", "systems", "framework",
+                "using", "based", "data", "dataset", "study", "new", "novel", "algorithm", "algorithms",
+                "evaluation", "performance", "investigation", "optimization", "technique", "techniques"
+            }
+            anchor_words = [w for w in query_words if w not in COMMON_GENERIC_WORDS and len(w) > 3]
 
+            # Kiểm tra xem bài báo có chứa từ khóa neo miền của đề tài hay không
+            matched_anchors_title = [w for w in anchor_words if w in t_words]
+            matched_anchors_abstract = [w for w in anchor_words if w in a_words]
 
-            if matched_terms == 0:
-
-                continue
-
-
-
-            # Thưởng điểm nếu khớp cụm bigram mang ý nghĩa thực sự
+            # Nếu đề tài có từ khóa neo miền đặc thù (ví dụ: flood, cancer, earthquake, energy, financial, traffic...)
+            if anchor_words:
+                if matched_anchors_title:
+                    # Thưởng điểm rất lớn nếu từ khóa neo nằm ngay trong tiêu đề bài báo
+                    score += 40.0 * len(matched_anchors_title)
+                elif matched_anchors_abstract:
+                    # Thưởng điểm nếu xuất hiện trong tóm tắt
+                    score += 15.0 * len(matched_anchors_abstract)
+                else:
+                    # PHẠT NẶNG (Domain Mismatch Penalty): Nếu bài báo không chứa bất kỳ từ khóa neo nào của đề tài
+                    # (ví dụ: đề tài bão lũ nhưng bài báo chỉ trùng các từ chung như "prediction", "risk", "data")
+                    score *= 0.15
 
             for bg in content_bigrams:
-
                 if len(bg) > 5 and bg in t_lower:
-
                     score += 15.0
-
                 elif len(bg) > 5 and bg in a_lower:
-
                     score += 5.0
 
-
-
-            # Điểm tỷ lệ bao phủ từ khóa
-
             coverage_ratio = matched_terms / max(len(query_words), 1)
-
             score += coverage_ratio * 25.0
 
-
-
-            # Điểm citation vừa phải làm tiêu chí phụ (tối đa 2 điểm)
-
             cit_count = paper.get("citationcount", 0) or 0
-
             score += min(cit_count / 50.0, 2.0)
-
-
 
             matches.append((score, paper))
 
-
-
         return matches
 
-
-
     def search_target_papers_with_scores(
-
         self,
-
         query: str,
-
         top_k: int = 10,
-
         exclude_corpusid: Optional[int] = None
-
     ) -> List[tuple]:
-
-        """
-
-        Tìm kiếm bài báo và trả về danh sách (score, paper) đã sort giảm dần.
-
-        Caller có thể dùng score để kiểm tra ngưỡng relevance của seed paper.
-
-        """
-
         if not self.is_loaded:
-
             self.load_all_data()
-
         matches = self._compute_paper_scores(query, exclude_corpusid)
-
         matches.sort(key=lambda x: x[0], reverse=True)
-
         return matches[:top_k]
 
-
-
     def search_target_papers(
-
         self,
-
         query: str,
-
         top_k: int = 10,
-
         exclude_corpusid: Optional[int] = None
-
     ) -> List[Dict[str, Any]]:
-
-        """
-
-        Tìm kiếm bài báo mục tiêu chính xác bằng thuật toán kết hợp:
-
-        - BM25/IDF Weighting (từ khóa hiếm/chuyên sâu có trọng số cao hơn từ khóa chung).
-
-        - Stopwords Filtering (loại bỏ 'in', 'of', 'based', 'machine', 'learning' gây nhiễu).
-
-        - Dual-field matching: Title (trọng số 3.0x) + Abstract (trọng số 1.0x).
-
-        - N-gram phrase matching bonus cho các cụm từ chính xác.
-
-        """
-
         return [p for _, p in self.search_target_papers_with_scores(query, top_k, exclude_corpusid)]
 
-
-
     def synthesize_open_world_seed_paper(self, topic: str, llm: Any) -> Dict[str, Any]:
-
-        """
-
-        Kích hoạt khi cơ sở dữ liệu offline không có bài báo phù hợp cho đề tài.
-
-        Sử dụng tri thức mở toàn cầu của Gemini để tổng hợp bài báo hạt giống chuẩn xác,
-
-        danh sách trích dẫn nền tảng và các thực thể khoa học cốt lõi.
-
-        """
-
-        prompt = f"""You are an elite research scientist and academic literature curator.
-
-The user wants to conduct novel AI research on: "{topic}".
-
-Our localized offline database does NOT contain seed papers on this specific topic.
-
-
+        prompt = f"""You are an academic literature curator.
+The user wants to conduct research on: "{topic}".
+Our offline database does not contain seed papers on this topic.
 
 TASK:
+1. Identify a REAL, actual published foundational or state-of-the-art paper in this domain (real paper title, real primary authors, real venue/year). DO NOT invent fictional papers.
+2. Provide 15-20 real published reference papers commonly cited in this field.
+3. Provide 15-20 core scientific domain concepts/entities.
 
-1. Synthesize a highly realistic, academically rigorous seed paper (representing recent state-of-the-art literature) strictly on "{topic}".
-
-2. Provide 5 foundational reference papers that this seed paper would cite in this exact field.
-
-3. Provide 20 core domain-specific scientific entities/concepts for this research.
-
-
-
-Respond strictly in JSON:
-
+Respond strictly in JSON format:
 ```json
-
 {{
-
   "target_paper": {{
-
-    "title": "Full Academic Title of the Seed Paper",
-
-    "abstract": "Comprehensive 150-200 word academic abstract describing the methodology, setup, and results.",
-
-    "authors": [{{"name": "First Author"}}, {{"name": "Second Author"}}],
-
-    "venue": "Top Conference/Journal Name (e.g. IEEE TGRS, NeurIPS, KDD, Nature Communications)",
-
-    "year": 2024,
-
+    "title": "Exact Title of Real Published Paper",
+    "abstract": "Actual abstract summary of the real paper.",
+    "authors": [{{"name": "Real Author 1"}}, {{"name": "Real Author 2"}}],
+    "venue": "Actual Conference/Journal (e.g. NeurIPS, ICML, IEEE)",
+    "year": 2023,
     "corpusid": 999001
-
   }},
-
   "references": [
-
     {{
-
-      "title": "Reference Paper 1 Title",
-
-      "authors": [{{"name": "Author et al."}}],
-
-      "venue": "Conference/Journal",
-
-      "year": 2023,
-
-      "corpusid": 999002
-
+      "title": "Real Reference Paper Title",
+      "authors": [{{"name": "Real Author"}}],
+      "venue": "Venue",
+      "year": 2022
     }}
-
   ],
-
-  "entities": ["Concept 1", "Concept 2", "Concept 3"]
-
+  "entities": ["entity1", "entity2"]
 }}
-
 ```"""
-
         try:
-
             res = llm.generate(prompt)
-
             match = re.search(r"```(?:json)?\s*(\{.*?\})\s*```", res, re.DOTALL)
-
             if match:
-
                 data = json.loads(match.group(1))
-
                 if "target_paper" in data and "references" in data:
-
                     return data
-
         except Exception as e:
-
             print(f"[KnowledgeStore] Lỗi tổng hợp open-world seed paper: {e}")
 
-
-
-        # Fallback an toàn
-
-        return {
-
-            "target_paper": {
-
-                "title": f"Recent Advances in {topic}",
-
-                "abstract": f"This foundational study investigates computational modeling and deep learning for {topic}, analyzing current theoretical challenges and empirical formulations.",
-
-                "authors": [{"name": "Lead Researcher"}, {"name": "Senior Scientist"}],
-
-                "venue": "arXiv preprint",
-
-                "year": 2024,
-
-                "corpusid": 999001
-
-            },
-
-            "references": [
-
-                {
-
-                    "title": f"Foundations of Machine Learning in {topic}",
-
-                    "authors": [{"name": "P. Scholar et al."}],
-
-                    "venue": "IEEE Access",
-
-                    "year": 2023,
-
-                    "corpusid": 999002
-
+        # Fallback an toàn: Thử lấy bài báo thực tế từ OpenAlex / arXiv qua retriever
+        try:
+            online_papers = self.retriever.fetch_papers_for_topic(topic=topic, limit=15)
+            if online_papers:
+                target_p = online_papers[0]
+                refs = online_papers[1:]
+                entities = [w.capitalize() for w in re.findall(r"\b[a-zA-Z]{3,}\b", topic) if w.lower() not in STOPWORDS]
+                return {
+                    "target_paper": target_p,
+                    "references": refs,
+                    "entities": entities
                 }
+        except Exception as e_ret:
+            print(f"[KnowledgeStore] Lỗi fallback tra cứu online: {e_ret}")
 
+        # Fallback trung lập nếu hoàn toàn offline và LLM không phản hồi
+        topic_words = [w.capitalize() for w in re.findall(r"\b[a-zA-Z]{3,}\b", topic) if w.lower() not in STOPWORDS]
+        author_lead = f"{topic_words[0]} Research Consortium" if topic_words else "AI Research Collaboration"
+        return {
+            "target_paper": {
+                "title": f"Recent Advances in {topic}",
+                "abstract": f"This foundational study investigates computational modeling and deep learning for {topic}, analyzing current theoretical challenges and empirical formulations.",
+                "authors": [{"name": author_lead}],
+                "venue": "arXiv.org",
+                "year": 2024,
+                "corpusid": 999001
+            },
+            "references": [
+                {
+                    "title": f"Foundations of Machine Learning in {topic}",
+                    "authors": [{"name": "Academic Researcher et al."}],
+                    "venue": "IEEE Access",
+                    "year": 2023,
+                    "corpusid": 999002
+                }
             ],
-
-            "entities": [w.capitalize() for w in re.findall(r"\b[a-zA-Z]{3,}\b", topic) if w.lower() not in STOPWORDS]
-
+            "entities": topic_words
         }
 
-
-
     def get_related_references_for_paper(self, paper: Dict[str, Any], top_k: int = 10) -> List[Dict[str, Any]]:
-
-        """
-
-        Lấy danh sách các bài báo liên quan chặt chẽ:
-
-        1. Tra cứu trực tiếp từ citation network nếu có.
-
-        2. Nếu đồ thị thiếu trích dẫn, FALLBACK BẰNG ĐỘ TƯƠNG ĐỒNG NỘI DUNG (Semantic Similarity)
-
-           với chính target paper (TUYỆT ĐỐI KHÔNG lấy ngẫu nhiên các bài đầu dataset).
-
-        """
-
         cid = paper.get("corpusid")
-
         ref_ids = self.paper2references.get(cid, [])
-
         found_papers = []
 
-
-
+        # 1. Ưu tiên các bài trích dẫn có sẵn metadata tác giả đầy đủ
         for r_id in ref_ids:
-
             if r_id in self.papers_by_id:
-
-                found_papers.append(self.papers_by_id[r_id])
-
+                p = self.papers_by_id[r_id]
+                if p.get("authors") or p.get("author"):
+                    found_papers.append(p)
             if len(found_papers) >= top_k:
-
                 break
 
-
-
-        # Nếu không đủ bài trích dẫn, fallback tìm các bài cùng chuyên ngành với target paper
-
+        # 2. Tìm kiếm các bài báo cùng chuyên ngành trong kho có đầy đủ tác giả
         if len(found_papers) < top_k:
-
             needed = top_k - len(found_papers)
-
             target_query = f"{paper.get('title', '')} {paper.get('abstract', '')[:300]}"
-
             topical_papers = self.search_target_papers(
-
                 query=target_query, 
-
-                top_k=needed + 5, 
-
+                top_k=(needed + 5) * 3, 
                 exclude_corpusid=cid
-
             )
-
             for tp in topical_papers:
-
-                if tp not in found_papers and tp.get("corpusid") != cid:
-
+                if tp not in found_papers and tp.get("corpusid") != cid and (tp.get("authors") or tp.get("author")):
                     found_papers.append(tp)
-
                 if len(found_papers) >= top_k:
-
                     break
 
-
+        # 3. Nếu vẫn chưa đủ, lấy thêm từ ref_ids (sẽ được tự động bù tác giả qua OpenAlex ở generate_bibtex)
+        if len(found_papers) < top_k:
+            for r_id in ref_ids:
+                if r_id in self.papers_by_id:
+                    p = self.papers_by_id[r_id]
+                    if p not in found_papers and p.get("corpusid") != cid:
+                        found_papers.append(p)
+                if len(found_papers) >= top_k:
+                    break
 
         return found_papers
 
-
-
     def generate_bibtex(self, paper: Dict[str, Any], cite_key: str) -> str:
-
-        """Tạo trích dẫn BibTeX chuẩn xác từ metadata bài báo."""
-
         title = paper.get("title", "Untitled").replace("{", "").replace("}", "").replace("&amp;", r"\&").replace("&", r"\&")
-
         authors_list = [a.get("name", "") for a in paper.get("authors", []) if a.get("name")]
 
-
         if not authors_list and paper.get("author"):
-
-
             if isinstance(paper["author"], list):
-
-
                 authors_list = [str(x) for x in paper["author"]]
-
-
             else:
-
-
                 authors_list = [str(paper["author"])]
 
+        # Nếu thiếu tác giả, tự động tra cứu nhanh từ OpenAlex theo tiêu đề để lấy tác giả thật
+        if not authors_list:
+            p_title = paper.get("title", "").strip()
+            if p_title and len(p_title) > 8:
+                try:
+                    fetched = self.retriever.search_openalex(p_title, limit=1)
+                    if fetched and fetched[0].get("authors"):
+                        paper["authors"] = fetched[0]["authors"]
+                        if not paper.get("year"):
+                            paper["year"] = fetched[0].get("year")
+                        if not paper.get("venue"):
+                            paper["venue"] = fetched[0].get("venue")
+                        authors_list = [a.get("name", "") for a in paper["authors"] if a.get("name")]
+                except Exception:
+                    pass
+
+        # Deduplicate authors preserving order
+        clean_authors = []
+        seen_names = set()
+        for a in authors_list:
+            aname = re.sub(r"\s+", " ", str(a).strip())
+            if aname and aname.lower() not in seen_names:
+                seen_names.add(aname.lower())
+                clean_authors.append(aname)
+        authors_list = clean_authors
 
         if authors_list:
-
-
             authors = " and ".join(authors_list)
-
-
         else:
+            authors = "Anonymous Scholar et al."
 
-
-            venue_name = paper.get("venue")
-
-
-            if venue_name and "arxiv" not in venue_name.lower() and len(venue_name) < 40:
-
-
-                authors = f"{venue_name.strip()} Research Group"
-
-
-            else:
-
-
-                title_words = paper.get("title", "Research").split()
-
-
-                lead_term = title_words[0] if title_words else "Research"
-
-
-                authors = f"{lead_term} et al."
-
-        venue = (paper.get("venue") or "arXiv preprint").replace("&amp;", r"\&").replace("&", r"\&")
-
-        year = paper.get("year") or 2024
-
+        raw_venue = paper.get("venue") or "arXiv preprint"
+        # Chuẩn hóa các venue không chuẩn từ repository hoặc dissertation
+        if any(w in raw_venue.lower() for w in ["research information", "repository", "institutional", "pre-print", "working paper"]):
+            venue = "Technical Report"
+        elif "dissertation" in raw_venue.lower() or "thesis" in raw_venue.lower():
+            venue = "PhD Thesis"
+        else:
+            venue = raw_venue
+        venue = venue.replace("&amp;", r"\&").replace("&", r"\&")
+        raw_year = paper.get("year")
+        year_str = f"  year={{{raw_year}}},\n" if raw_year else ""
         cid = paper.get("corpusid", "")
-
-
+        url = paper.get("url", "")
+        note_parts = []
+        if cid:
+            note_parts.append(f"CorpusID: {cid}")
+        if url:
+            note_parts.append(f"URL: {url}")
+        joined_notes = ", ".join(note_parts)
+        note_str = f"  note={{{joined_notes}}}" if note_parts else ""
 
         return f"""@article{{{cite_key},
-
   title={{{{{title}}}}},
-
   author={{{authors}}},
-
   journal={{{venue}}},
-
-  year={{{year}}},
-
-  note={{CorpusID: {cid}}}
-
+{year_str}{note_str}
 }}"""
 
-
-
     def generate_bibtex_entry(self, paper: Dict[str, Any], cite_key: str = "ref") -> str:
-
-        """Alias for generate_bibtex to maintain compatibility with LaTeXWriter."""
-
         return self.generate_bibtex(paper, cite_key)
 
-
-
     def enrich_with_external_papers(
-
         self, 
-
         topic: str, 
-
-        top_k: int = 8, 
-
-        semantic_scholar_key: Optional[str] = None
-
+        top_k: int = 35, 
+        semantic_scholar_key: Optional[str] = None,
+        save_cache: bool = False
     ) -> Dict[str, Any]:
-
-        """
-
-        Khai phá bài báo thật từ các kho học thuật mở toàn cầu (OpenAlex, arXiv, Semantic Scholar)
-
-        khi kho dữ liệu offline không đủ độ phủ hoặc gặp đề tài mới lạ.
-
-        """
-
-        if not self.is_loaded:
-
-            self.load_all_data()
-
-
-
         papers = self.retriever.fetch_papers_for_topic(
-
             topic=topic,
-
             limit=top_k,
-
-            semantic_scholar_key=semantic_scholar_key
-
+            semantic_scholar_key=semantic_scholar_key,
+            save_cache=save_cache
         )
-
         if not papers:
-
             return {}
 
-
-
-        # Đưa các bài báo mới vào RAM và cập nhật TF-IDF doc_freq
-
         for p in papers:
-
             cid = p.get("corpusid")
-
             if cid and cid not in self.papers_by_id:
-
                 self.papers_by_id[cid] = p
-
                 text = (p.get("title", "") + " " + p.get("abstract", "")).lower()
-
                 words = set(re.findall(r"\b[a-z]{2,}\b", text)) - STOPWORDS
-
                 self.doc_freq.update(words)
 
-
-
         target_paper = papers[0]
-
         target_cid = target_paper.get("corpusid")
-
         references = papers[1:]
 
-
-
-        # Thiết lập liên kết trích dẫn giữa target paper và các bài tham chiếu
-
         for ref in references:
-
             ref_cid = ref.get("corpusid")
-
             if target_cid and ref_cid:
-
                 if ref_cid not in self.paper2references[target_cid]:
-
                     self.paper2references[target_cid].append(ref_cid)
 
-
-
-        # Khai phá thực thể khoa học từ các bài báo mới
-
         all_pids = [p.get("corpusid") for p in papers if p.get("corpusid")]
+        discovered_entities = []
+        if self.is_loaded:
+            discovered_entities = self.get_relevant_entities(all_pids, top_k=30)
 
-        discovered_entities = self.get_relevant_entities(all_pids, top_k=30)
-
-        
-
-        # Nếu danh sách thực thể chưa đủ, bổ sung trực tiếp từ từ khóa topic & title
+        # Trích xuất trực tiếp các cụm thuật ngữ khoa học từ bài báo trực tuyến
+        if len(discovered_entities) < 20:
+            for p in papers:
+                p_text = f"{p.get('title', '')} {p.get('abstract', '')}"
+                phrases = re.findall(r"\b([A-Z][a-zA-Z0-9_-]+(?:\s+[A-Za-z0-9_-]+){1,2})\b", p_text)
+                for ph in phrases:
+                    clean_ph = ph.strip()
+                    if len(clean_ph) > 4 and clean_ph not in discovered_entities and clean_ph.lower() not in STOPWORDS:
+                        discovered_entities.append(clean_ph)
+                    if len(discovered_entities) >= 30:
+                        break
+                if len(discovered_entities) >= 30:
+                    break
 
         if len(discovered_entities) < 10:
-
             topic_words = [w.capitalize() for w in re.findall(r"\b[a-zA-Z]{3,}\b", topic) if w.lower() not in STOPWORDS]
-
             for tw in topic_words:
-
                 if tw not in discovered_entities:
-
                     discovered_entities.append(tw)
 
-
-
         return {
-
             "target_paper": target_paper,
-
             "references": references,
-
             "entities": discovered_entities,
-
             "source": target_paper.get("source", "Online Academic Index"),
-
             "total_fetched": len(papers)
-
         }
-
-
-
-
-

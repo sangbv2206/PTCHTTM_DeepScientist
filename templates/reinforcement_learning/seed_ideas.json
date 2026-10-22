@@ -1,0 +1,18 @@
+[
+  {
+    "Name": "prioritized_experience_replay",
+    "Title": "Prioritized Experience Replay with Temporal-Difference Error Sampling",
+    "Experiment": "Replace uniform replay buffer sampling with TD-error based priority sampling, applying importance sampling correction weights to stabilize policy gradient updates.",
+    "Interestingness": 8,
+    "Feasibility": 9,
+    "Novelty": 6
+  },
+  {
+    "Name": "curiosity_driven_intrinsic_reward",
+    "Title": "Curiosity-Driven Intrinsic Exploration via Forward Dynamics Error",
+    "Experiment": "Augment environmental extrinsic reward with intrinsic novelty reward computed from forward state prediction error in sparse-reward environments.",
+    "Interestingness": 9,
+    "Feasibility": 8,
+    "Novelty": 8
+  }
+]

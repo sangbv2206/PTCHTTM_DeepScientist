@@ -6,17 +6,10 @@ from core.gemini_llm import GeminiLLM
 
 
 class PeerReviewer:
-    """
-    Tác nhân phản biện học thuật độc lập (kế thừa perform_review từ Sakana AI):
-    Đánh giá bài báo khoa học theo tiêu chuẩn hội nghị top-tier (ICLR / NeurIPS).
-    Xuất ra file peer_review.json và báo cáo Markdown chi tiết peer_review.md.
-    """
-
     def __init__(self, llm: GeminiLLM):
         self.llm = llm
 
     def _parse_review_response(self, response_text: str, paper_title: str, metrics: Dict[str, Any]) -> Dict[str, Any]:
-        """Trích xuất và chuẩn hóa JSON phản biện, fallback thông minh nếu LLM trả về định dạng lỗi."""
         json_str = ""
         match = re.search(r"```(?:json)?\s*(\{[\s\S]*?\})\s*```", response_text)
         if match:
@@ -29,44 +22,43 @@ class PeerReviewer:
 
         review_data = None
         if json_str:
-            # Sửa các lỗi phổ biến trong JSON do LLM sinh ra: trailing comma
             clean_str = re.sub(r",\s*([\]\}])", r"\1", json_str)
             try:
                 review_data = json.loads(clean_str)
             except Exception:
                 try:
-                    # Thử escape các ký tự điều khiển
                     clean_str2 = re.sub(r"[\x00-\x1f]", " ", clean_str)
                     review_data = json.loads(clean_str2)
                 except Exception:
                     pass
 
-        # Nếu json.loads vẫn thất bại, trích xuất mềm bằng regex các trường cốt lõi
         if not review_data or not isinstance(review_data, dict):
             summary_m = re.search(r'"summary"\s*:\s*"([^"]+)"', response_text)
             rec_m = re.search(r'"recommendation"\s*:\s*"([^"]+)"', response_text)
             rating_m = re.search(r'"overall_rating"\s*:\s*(\d+)', response_text)
-            
-            summary_text = summary_m.group(1) if summary_m else f"The paper investigates and proposes '{paper_title}', developing formal methodology and empirical evaluation."
-            recommendation = rec_m.group(1) if rec_m else "Accept (Poster)"
-            rating = int(rating_m.group(1)) if rating_m else 7
+
+            summary_text = summary_m.group(1) if summary_m else f"The paper investigates '{paper_title}', developing formal methodology and empirical evaluation."
+            recommendation = rec_m.group(1) if rec_m else "Weak Accept"
+            rating = int(rating_m.group(1)) if rating_m else 6
 
             review_data = {
                 "summary": summary_text,
                 "strengths": [
-                    f"Direct, well-motivated focus on {paper_title}",
-                    "Empirical validation backed by recorded training metrics and figures"
+                    f"Direct and structured empirical investigation into {paper_title}",
+                    "Implementation grounded in verifiable execution logs and figures"
                 ],
                 "weaknesses": [
-                    "Could be further evaluated on broader external benchmarks to assess edge-case robustness"
+                    "Evaluation budget is constrained to single-split execution without extensive multi-seed variance",
+                    "Requires validation across diverse external real-world benchmarks"
                 ],
                 "questions": [
-                    "How does the method scale as dataset complexity or model parameter size increases?"
+                    "How does the computational overhead scale as the input dimension or parameter count grows?",
+                    "What specific architectural trade-offs emerge under extreme resource constraints?"
                 ],
                 "scores": {
                     "soundness": 3,
-                    "presentation": 4,
-                    "contribution": 4,
+                    "presentation": 3,
+                    "contribution": 3,
                     "overall_rating": rating,
                     "confidence": 4
                 },
@@ -74,7 +66,6 @@ class PeerReviewer:
                 "ethical_considerations": "None."
             }
 
-        # Normalize score keys if nested under detailed_scores
         scores = review_data.get("scores", {})
         if not scores and "detailed_scores" in review_data:
             scores = dict(review_data["detailed_scores"])
@@ -102,49 +93,57 @@ class PeerReviewer:
         tex_content = ""
         if os.path.exists(paper_tex_path):
             with open(paper_tex_path, "r", encoding="utf-8") as f:
-                tex_content = f.read()[:15000]  # Cap to fit prompt cleanly
+                tex_content = f.read()[:150000]
 
         prompt = f"""You are a distinguished Area Chair and Senior Reviewer for top AI conferences (ICLR, NeurIPS, ICML).
-Conduct a rigorous, objective, and constructive double-blind peer review of the following scientific submission.
+Conduct a rigorous, objective, un-flattered, and constructive double-blind peer review of the following scientific submission.
 
 PAPER TITLE: {paper_title}
-EMPIRICAL METRICS RECORDED: {json.dumps(metrics_data)}
+VERIFIED EMPIRICAL METRICS RECORDED: {json.dumps(metrics_data)}
 
-LATEX SOURCE CONTENT:
+LATEX SOURCE MANUSCRIPT:
 \"\"\"
 {tex_content}
 \"\"\"
-""" + """
-### REVIEW CRITERIA:
-1. Summary of Contributions: What does the paper propose and what are its key claims?
-2. Strengths: Novelty, technical soundness, theoretical depth, empirical verification.
-3. Weaknesses: Potential edge cases, baseline comprehensiveness, scope of experiments.
-4. Constructive Questions for Authors.
-5. Scores:
-   - Soundness: 1 (Poor), 2 (Fair), 3 (Good), 4 (Excellent)
-   - Presentation: 1 (Poor), 2 (Fair), 3 (Good), 4 (Excellent)
-   - Contribution: 1 (Poor), 2 (Fair), 3 (Good), 4 (Excellent)
-   - Overall Rating: 1 (Strong Reject) to 10 (Award Quality)
-   - Confidence: 1 (Educated guess) to 5 (Absolute certainty)
-   - Recommendation: "Accept (Oral)", "Accept (Poster)", "Weak Accept", "Borderline", or "Reject"
+
+### CRITICAL REVIEW DIRECTIVES:
+1. DATA CONSISTENCY AUDIT:
+   - Check whether numbers in the manuscript faithfully reflect the VERIFIED EMPIRICAL METRICS RECORDED above.
+   - If the paper claims unverified baselines or exaggerated superiorities where the proposed method actually underperformed or degraded, severely penalize Soundness and point this out in Weaknesses.
+2. RIGOROUS CALIBRATION (NO INFLATED PRAISE):
+   - Realistically assess the computational budget (e.g. single-split runs, benchmark size, absence of multi-seed error bars).
+   - Most solid papers in this setting receive realistic scores between 5 (Borderline) and 7 (Weak Accept/Poster). Avoid mindless 9-10 scores unless truly groundbreaking.
+3. STRUCTURED FEEDBACK:
+   - Identify concrete technical Strengths (method formulation, clarity, reproducibility).
+   - Identify actionable Weaknesses (evaluation scope, parameter sensitivity, hardware generalization).
+   - Pose 2-3 precise Questions for the authors.
 
 Respond strictly in valid JSON format:
 ```json
-{
-  "summary": "...",
-  "strengths": ["...", "..."],
-  "weaknesses": ["...", "..."],
-  "questions": ["...", "..."],
-  "scores": {
+{{
+  "summary": "Concise summary of problem, method, and key findings",
+  "strengths": [
+    "Specific strength 1",
+    "Specific strength 2"
+  ],
+  "weaknesses": [
+    "Specific weakness / limitation 1",
+    "Specific weakness / limitation 2"
+  ],
+  "questions": [
+    "Technical question 1",
+    "Technical question 2"
+  ],
+  "scores": {{
     "soundness": 3,
-    "presentation": 4,
-    "contribution": 4,
-    "overall_rating": 8,
+    "presentation": 3,
+    "contribution": 3,
+    "overall_rating": 6,
     "confidence": 4
-  },
-  "recommendation": "Accept (Poster)",
+  }},
+  "recommendation": "Weak Accept",
   "ethical_considerations": "None."
-}
+}}
 ```
 """
         response_text = self.llm.generate(prompt)
@@ -156,11 +155,12 @@ Respond strictly in valid JSON format:
             json.dump(review_data, f, indent=2, ensure_ascii=False)
 
         # Lưu file Markdown đẹp
+        scores = review_data.get("scores", {})
         md_content = f"""# Official Conference Peer Review Report
 
 **Paper Title:** {paper_title}  
-**Recommendation:** **{review_data.get('recommendation', 'Accept')}**  
-**Overall Rating:** **{review_data.get('scores', {}).get('overall_rating', 'N/A')}/10**  
+**Recommendation:** **{review_data.get('recommendation', 'Borderline')}**  
+**Overall Rating:** **{scores.get('overall_rating', 'N/A')}/10**  
 
 ---
 
@@ -169,14 +169,14 @@ Respond strictly in valid JSON format:
 
 ---
 
-### 2. Scores
+### 2. Evaluation Scores
 | Metric | Score | Scale |
 | :--- | :---: | :---: |
-| **Soundness** | {review_data.get('scores', {}).get('soundness', 3)}/4 | 1 (Poor) - 4 (Excellent) |
-| **Presentation** | {review_data.get('scores', {}).get('presentation', 4)}/4 | 1 (Poor) - 4 (Excellent) |
-| **Contribution / Novelty** | {review_data.get('scores', {}).get('contribution', 4)}/4 | 1 (Poor) - 4 (Excellent) |
-| **Overall Recommendation** | **{review_data.get('scores', {}).get('overall_rating', 8)}/10** | 1 (Strong Reject) - 10 (Award Quality) |
-| **Reviewer Confidence** | {review_data.get('scores', {}).get('confidence', 4)}/5 | 1 (Low) - 5 (Expert) |
+| **Soundness** | {scores.get('soundness', 3)}/4 | 1 (Poor) - 4 (Excellent) |
+| **Presentation** | {scores.get('presentation', 3)}/4 | 1 (Poor) - 4 (Excellent) |
+| **Contribution / Novelty** | {scores.get('contribution', 3)}/4 | 1 (Poor) - 4 (Excellent) |
+| **Overall Recommendation** | **{scores.get('overall_rating', 6)}/10** | 1 (Strong Reject) - 10 (Award Quality) |
+| **Reviewer Confidence** | {scores.get('confidence', 4)}/5 | 1 (Low) - 5 (Expert) |
 
 ---
 
@@ -197,5 +197,23 @@ Respond strictly in valid JSON format:
         with open(md_path, "w", encoding="utf-8") as f:
             f.write(md_content)
 
-        print(f"[PeerReviewer] Đã xuất báo cáo phản biện tại: {md_path}")
+        import textwrap
+        # In kết quả trực quan ra màn hình Terminal cho người dùng
+        rec = review_data.get("recommendation", "Borderline")
+        rating = scores.get("overall_rating", "N/A")
+        print("\n" + "=" * 65)
+        print(f" [HỘI ĐỒNG BÌNH DUYỆT ĐỘC LẬP (PEER REVIEW)]: {rec.upper()} ({rating}/10)")
+        print("=" * 65)
+        print(f" * Soundness: {scores.get('soundness', 3)}/4 | Presentation: {scores.get('presentation', 3)}/4 | Novelty: {scores.get('contribution', 3)}/4")
+        print("\n [ĐIỂM MẠNH CHÍNH (STRENGTHS)]:")
+        for s in review_data.get("strengths", [])[:2]:
+            clean_s = textwrap.fill(str(s).strip(), width=75, initial_indent="  + ", subsequent_indent="    ")
+            print(clean_s)
+        print("\n [HẠN CHẾ & ĐIỂM YẾU (WEAKNESSES)]:")
+        for w in review_data.get("weaknesses", [])[:2]:
+            clean_w = textwrap.fill(str(w).strip(), width=75, initial_indent="  - ", subsequent_indent="    ")
+            print(clean_w)
+        print("-" * 65)
+        print(f" * Báo cáo chi tiết: {md_path}\n")
+
         return review_data

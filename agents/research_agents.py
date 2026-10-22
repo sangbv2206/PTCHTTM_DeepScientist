@@ -22,7 +22,6 @@ def extract_json_safely(text: str, default: Dict[str, Any]) -> Dict[str, Any]:
 
 
 def safe_float(val: Any, default: float = 4.0) -> float:
-    """Chuyển đổi an toàn giá trị điểm từ LLM sang float, loại bỏ hoàn toàn nguy cơ lỗi format specifier."""
     if val is None:
         return default
     if isinstance(val, (int, float)):
@@ -38,7 +37,6 @@ def safe_float(val: Any, default: float = 4.0) -> float:
 
 
 def sanitize_validator_output(data: Dict[str, Any], default: Dict[str, Any]) -> Dict[str, Any]:
-    """Đảm bảo mọi trường điểm số trong validator luôn là kiểu float chuẩn."""
     if not isinstance(data, dict):
         data = default.copy()
 
@@ -63,13 +61,7 @@ def sanitize_validator_output(data: Dict[str, Any], default: Dict[str, Any]) -> 
 
     return data
 
-
-# =========================================================================
-# 1. TẦNG 1: PROBLEM FORMULATION (ProblemIdentifier + ProblemValidator)
-# =========================================================================
-
 class ProblemIdentifier:
-    """Tác nhân xác định bài toán khoa học nguyên bản của ResearchAgent."""
     def __init__(self, llm: GeminiLLM):
         self.llm = llm
 
@@ -109,6 +101,7 @@ Abstract: {target_paper.get('abstract', 'N/A')}
         prompt += """
 ### TASK:
 Formulate a rigorous research problem that is original, clear, feasible, relevant, and strictly centered on the Mandatory User Research Anchor.
+MANDATORY LANGUAGE: All outputs (problem, problem_rationale) MUST be written strictly in professional academic English. Under no circumstances should any non-English words be used.
 Respond strictly in JSON format:
 ```json
 {
@@ -126,7 +119,6 @@ Respond strictly in JSON format:
 
 
 class ProblemValidator:
-    """Tác nhân phản biện bài toán khoa học qua 6 tiêu chí: Topic Fidelity, Clarity, Relevance, Originality, Feasibility, Significance."""
     def __init__(self, llm: GeminiLLM):
         self.llm = llm
 
@@ -181,7 +173,6 @@ Respond strictly in JSON format:
 
 
 class MethodDeveloper:
-    """Tác nhân xây dựng phương pháp giải quyết nguyên bản của ResearchAgent."""
     def __init__(self, llm: GeminiLLM):
         self.llm = llm
 
@@ -219,16 +210,18 @@ Do NOT drift into unrelated physical, biological, or mathematical domains!
         prompt += """
 ### TASK:
 Develop a complete method specifying:
-1. Method Name (Academic, professional, clearly reflecting the user topic and technical innovation).
-2. Method Abbreviation (3-6 capital letters).
+1. Method Name (Academic, professional, clearly reflecting the user topic and technical innovation in English).
+2. Method Abbreviation (3-6 capital letters, strictly derived from the capitalized initials of the English Method Name).
 3. Formal Mathematical Formulation (variables, objective function, loss components).
 4. Algorithmic Procedure (step-by-step).
 5. Theoretical Rationale explaining why it solves the problem.
 
+MANDATORY LANGUAGE: All fields (method_name, method_abbr, method, mathematical_formulation, method_rationale) MUST be written strictly in professional academic English. Under NO circumstances should any non-English words be used.
+
 Respond strictly in JSON format:
 ```json
 {
-  "method_name": "Full descriptive name of the proposed method",
+  "method_name": "Full descriptive English name of the proposed method",
   "method_abbr": "ABBR",
   "method": "Step-by-step algorithmic description of how the method operates",
   "mathematical_formulation": "Formal LaTeX equations and loss functions: e.g. \\mathcal{L} = \\mathcal{L}_{task} + \\alpha \\mathcal{L}_{reg}",
@@ -237,18 +230,22 @@ Respond strictly in JSON format:
 ```
 """
         res = self.llm.generate(prompt)
+        safe_topic = re.sub(r'[^\x00-\x7F]+', ' ', user_topic).strip() or "Scientific Representation Learning"
+        safe_topic = re.sub(r'\s+', ' ', safe_topic)
+        full_name = f"Adaptive Framework for {safe_topic}"
+        words = re.findall(r"[A-Za-z0-9]+", full_name)
+        topic_abbr = "".join([w[0].upper() for w in words if w.lower() not in ["and", "for", "with", "of", "in", "the", "a"]])[:6] or "ADAPT"
         default = {
-            "method_name": f"Adaptive Framework for {user_topic}",
-            "method_abbr": "AFU",
+            "method_name": full_name,
+            "method_abbr": topic_abbr,
             "method": "Harmonizes representation gradients using adaptive layer-wise normalization.",
             "mathematical_formulation": r"\mathcal{L} = \mathcal{L}_{task} + \lambda \mathcal{L}_{reg}",
-            "method_rationale": f"Directly optimizes the objective for {user_topic}."
+            "method_rationale": f"Directly optimizes the objective for {safe_topic}."
         }
         return extract_json_safely(res, default)
 
 
 class MethodValidator:
-    """Tác nhân phản biện phương pháp qua 6 tiêu chí: Topic Fidelity, Clarity, Soundness, Novelty, Feasibility, Effectiveness."""
     def __init__(self, llm: GeminiLLM):
         self.llm = llm
 
@@ -355,12 +352,24 @@ Respond strictly in JSON format:
 ```
 """
         res = self.llm.generate(prompt)
+        domain_metrics = context.get("metrics") or []
+        if not domain_metrics:
+            topic_str = str(context.get("user_topic", "")).lower()
+            if any(k in topic_str for k in ["forecast", "series", "stage", "regression"]):
+                domain_metrics = ["Mean Squared Error (MSE)", "Mean Absolute Error (MAE)", "R^2 Score"]
+            elif any(k in topic_str for k in ["graph", "node", "classification"]):
+                domain_metrics = ["Node Classification Accuracy (%)", "Cross-Entropy Loss"]
+            elif any(k in topic_str for k in ["trial", "causal", "survival", "hazard"]):
+                domain_metrics = ["C-Index", "Brier Score", "Average Treatment Effect (ATE)"]
+            else:
+                domain_metrics = ["Evaluation Metric", "Validation Loss", "Convergence Steps"]
+
         default = {
-            "experiment": "Train models on graph benchmark, evaluate test accuracy and loss curves over 50 epochs.",
-            "experiment_rationale": "Directly isolates the contribution of the proposed architectural modifications.",
-            "baselines": ["Standard Model", "Ablated Variant", "Proposed Method"],
-            "metrics": ["Accuracy (%)", "Validation Loss", "Training Epochs"],
-            "ablations": ["Without Auxiliary Loss"]
+            "experiment": f"Train models on standardized benchmark for {context.get('user_topic', 'task')}, evaluate generalization metrics and convergence.",
+            "experiment_rationale": "Directly isolates the contribution of the proposed architectural modifications against competitive baselines.",
+            "baselines": ["Standard Baseline", "Proposed Method"],
+            "metrics": domain_metrics,
+            "ablations": ["Without Regularization Component"]
         }
         return extract_json_safely(res, default)
 

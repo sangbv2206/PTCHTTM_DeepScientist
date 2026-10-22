@@ -2,17 +2,31 @@
 
 \usepackage[utf8]{inputenc}
 \usepackage[T1]{fontenc}
+
+% amsthm MUST be loaded BEFORE newtxmath (newtxmath suppresses its own amsthm loading)
+\usepackage{amsthm}
+\newtheorem{theorem}{Theorem}
+\newtheorem{lemma}{Lemma}
+\newtheorem{corollary}{Corollary}
+\newtheorem{proposition}{Proposition}
+\newtheorem*{remark}{Remark}
+
+% newtxtext/newtxmath already loads amsmath, amssymb internally - DO NOT load amssymb separately
 \usepackage{newtxtext,newtxmath}
 \usepackage[margin=0.75in]{geometry}
 \setlength{\columnsep}{0.25in}
-\usepackage{amsmath,mathtools}
+\usepackage{mathtools}
 \usepackage{graphicx}
 \usepackage{booktabs}
+\usepackage{multirow}
 \usepackage{array}
 \usepackage{tabularx}
 \usepackage{adjustbox}
+\usepackage{float}
+\usepackage{placeins}
 \usepackage{caption}
 \captionsetup{font=small,labelfont=bf}
+\usepackage{subcaption}
 \usepackage{microtype}
 \usepackage{xcolor}
 \usepackage{url}
@@ -28,12 +42,23 @@
     breaklinks=true
 }
 
-% Cân bằng vi giãn cách và loại bỏ lỗi tràn lề trong chế độ 2 cột
-\emergencystretch 2.5em
+% Compatibility stubs for LLM-generated commands
+\providecommand{\sphinxhere}{\FloatBarrier}
+\newenvironment{discussion}{\par\medskip}{\par\medskip}
+\newenvironment{limitations}{\par\medskip}{\par\medskip}
+\newenvironment{broaderimpact}{\par\medskip}{\par\medskip}
+\newenvironment{broader_impact}{\par\medskip}{\par\medskip}
+\renewenvironment{paragraph}{\par\medskip}{\par\medskip}
+\newenvironment{conclusion}{\par\medskip}{\par\medskip}
+
+% Giãn cách và loại bỏ lỗi tràn lề trong chế độ 2 cột
+\emergencystretch 3.0em
 \tolerance 9999
-\hfuzz 2pt
-\vfuzz 2pt
+\hfuzz 3pt
+\vfuzz 3pt
 \hbadness 9999
+\allowdisplaybreaks
+\raggedbottom
 
 \title{\LARGE\textbf{<<TITLE>>}}
 
@@ -53,13 +78,15 @@
 <<ABSTRACT>>
 \end{abstract}
 
+<<TEASER_FIGURE>>
+
 \section{Introduction}
 <<INTRODUCTION>>
 
 \section{Related Work}
 <<RELATED_WORK>>
 
-\section{Problem Formulation \& Theoretical Background}
+\section{Problem Formulation \& Evaluation Protocol}
 <<BACKGROUND_AND_FORMULATION>>
 
 \section{Proposed Methodology}
@@ -68,7 +95,7 @@
 \section{Experimental Setup \& Empirical Evaluation}
 <<EXPERIMENTS_AND_RESULTS>>
 
-\section{Discussion, Limitations \& Future Work}
+\section{Discussion, Limitations \& Broader Impact}
 <<DISCUSSION>>
 
 \section{Conclusion}
@@ -76,5 +103,19 @@
 
 \bibliographystyle{plain}
 \bibliography{references}
+
+\clearpage
+\appendix
+\section{Extended Mathematical Formulations \& Theoretical Derivations}
+<<APPENDIX_MATH>>
+
+\section{Detailed Baseline Configurations \& Implementation Setup}
+<<APPENDIX_IMPLEMENTATION>>
+
+\section{Supplementary Experimental Results \& Qualitative Diagnostics}
+<<APPENDIX_EXPERIMENTS>>
+
+\section{Reproducibility Statement \& Compute Infrastructure Checklist}
+<<APPENDIX_REPRODUCIBILITY>>
 
 \end{document}

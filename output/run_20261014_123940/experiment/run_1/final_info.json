@@ -1,0 +1,11 @@
+{
+  "domain": "Dynamic Target Trial Emulation & Longitudinal Causal Survival Forests",
+  "primary_metric": "Harrell's C-index",
+  "best_c_index": 0.6929,
+  "brier_score": 0.1701,
+  "unadjusted_max_asmd": 0.7376,
+  "post_weighting_max_asmd": 0.2029,
+  "ate_targeted_vs_chemo": -0.074,
+  "ate_immuno_vs_chemo": -0.0152,
+  "ground_truth_hr_immuno": 0.65
+}

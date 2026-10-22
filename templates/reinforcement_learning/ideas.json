@@ -1,0 +1,11 @@
+[
+  {
+    "Name": "prioritized_experience_replay",
+    "Title": "Prioritized Experience Replay with Temporal-Difference Error Sampling",
+    "Experiment": "Replace uniform replay buffer sampling with TD-error based priority sampling, applying importance sampling correction weights to stabilize policy gradient updates.",
+    "Interestingness": 8,
+    "Feasibility": 9,
+    "Novelty": 6,
+    "novel": true
+  }
+]

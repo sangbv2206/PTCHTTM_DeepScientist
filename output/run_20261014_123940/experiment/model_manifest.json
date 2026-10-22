@@ -1,0 +1,11 @@
+{
+  "framework": "PyTorch",
+  "model_family": "Stabilized Propensity-Weighted Deep Survival Network (sIPTW-DSN)",
+  "propensity_model": "PropensityNetwork (Multinomial Softmax with pos-truncation [0.05, 0.95])",
+  "survival_model": "TargetTrialSurvivalNet (sIPTW-Weighted Risk Function)",
+  "optimizer": "AdamW",
+  "learning_rate": 0.001,
+  "epochs": 15,
+  "batch_size": 64,
+  "evaluation_protocol": "Single-split controlled deterministic benchmark (Seed 42)"
+}

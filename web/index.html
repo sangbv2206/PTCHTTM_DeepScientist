@@ -1,0 +1,149 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>DeepScientist - Không gian nghiên cứu khoa học tự động</title>
+  <link rel="stylesheet" href="/assets/styles.css" />
+  <style>
+    .paper-viewer{margin-top:20px;border:1px solid var(--line);background:#eef0ea}.paper-heading{display:flex;justify-content:space-between;align-items:center;padding:18px 20px;background:var(--panel)}.paper-heading h3{margin:0;font-size:18px}.paper-link{color:var(--teal);font-size:12px;font-weight:600;text-decoration:none}.paper-viewer iframe{display:block;width:100%;height:720px;border:0;background:white}@media(max-width:800px){.paper-viewer iframe{height:560px}}
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <header class="topbar">
+      <a class="brand" href="/"><span class="brand-mark">DS</span><span>DeepScientist</span></a>
+      <div class="topbar-meta"><span class="status-dot"></span><span id="serverStatus">Hệ thống sẵn sàng</span></div>
+    </header>
+    <main>
+      <section class="hero">
+        <div>
+          <p class="eyebrow">KHÔNG GIAN NGHIÊN CỨU TỰ ĐỘNG</p>
+          <h1>Biến ý tưởng thành bài báo khoa học.</h1>
+          <p class="hero-copy">Tự động hóa toàn bộ quy trình: từ khảo sát tài liệu thực tế, phát triển thuật toán, thực nghiệm PyTorch, soạn thảo LaTeX đến phản biện độc lập.</p>
+        </div>
+        <div class="hero-stamp">
+          <span>QUY TRÌNH</span>
+          <strong>0—7</strong>
+          <small>8 giai đoạn khép kín</small>
+        </div>
+      </section>
+      <!-- Banner thông báo khi có nghiên cứu đang chạy ngầm -->
+      <aside id="activeRunBanner" class="active-run-banner hidden">
+        <div class="active-run-left">
+          <span class="active-pulse-ring"><span class="active-pulse-dot"></span></span>
+          <div class="active-run-content">
+            <div class="active-run-title-row">
+              <span class="active-badge">ĐANG CHẠY NGẦM</span>
+              <strong id="activeRunTopic" class="active-run-topic">Đang thực hiện đề tài…</strong>
+            </div>
+            <div class="active-run-status-row">
+              <span id="activeRunStage">Giai đoạn: Khảo sát tài liệu</span>
+              <span class="dot-separator">·</span>
+              <span>Tiến độ: <strong id="activeRunProgress">0%</strong></span>
+              <span class="dot-separator">·</span>
+              <span id="activeRunMessage" class="active-run-msg"></span>
+            </div>
+          </div>
+        </div>
+        <button id="viewActiveRunBtn" class="active-run-jump-btn" type="button">
+          Xem tiến trình đang chạy ↗
+        </button>
+      </aside>
+      <section class="workspace-grid">
+        <aside class="panel new-run-panel">
+          <div class="panel-heading">
+            <div><p class="eyebrow">KHỞI TẠO ĐỀ TÀI</p><h2>Nghiên cứu mới</h2></div>
+            <span class="panel-number">01</span>
+          </div>
+          <form id="runForm">
+            <label>Chủ đề nghiên cứu khoa học
+              <textarea id="topic" required minlength="3" placeholder="Ví dụ: Transformer Architecture Optimization and Efficient Attention Mechanisms for Small Language Models"></textarea>
+            </label>
+            <label>Template thực nghiệm
+              <select id="template">
+                <option value="">Tự động chọn (Auto-select)</option>
+              </select>
+            </label>
+            <div class="form-row">
+              <label>Vòng phản biện
+                <input id="iterations" type="number" min="1" max="5" value="1" />
+              </label>
+              <label>Mô hình LLM
+                <input id="model" value="gemini-3.5-flash-lite" placeholder="e.g. gemini-3.5-flash-lite" />
+              </label>
+            </div>
+            <label class="toggle-row">
+              <input id="offline" type="checkbox" />
+              <span class="toggle"></span>
+              <span>Chỉ dùng tài liệu ngoại tuyến (Offline)</span>
+            </label>
+            <button class="primary-button" type="submit">
+              <span>Bắt đầu nghiên cứu</span>
+              <span>↗</span>
+            </button>
+            <p id="formMessage" class="form-message"></p>
+          </form>
+        </aside>
+        <section class="panel runs-panel">
+          <div class="panel-heading">
+            <div>
+              <p class="eyebrow">NHẬT KÝ THỰC HIỆN</p>
+              <h2>Lịch sử nghiên cứu <span id="runsCountBadge" class="count-badge">0</span></h2>
+            </div>
+            <button id="refreshRuns" class="icon-button" title="Làm mới danh sách">↻</button>
+          </div>
+          <div class="runs-search-bar">
+            <input id="runsSearchInput" type="text" placeholder="Tìm kiếm đề tài hoặc mã..." />
+          </div>
+          <div id="runsList" class="runs-list">
+            <div class="empty-state">Chưa có lượt chạy nào. Lượt nghiên cứu mới sẽ hiển thị tại đây.</div>
+          </div>
+          <div id="runsPagination" class="pagination-bar"></div>
+        </section>
+      </section>
+      <section id="detailPanel" class="panel detail-panel hidden">
+        <div class="detail-header">
+          <div>
+            <p class="eyebrow">TIẾN TRÌNH THỰC NGHIỆM THỜI GIAN THỰC</p>
+            <h2 id="detailTitle">Lượt nghiên cứu</h2>
+            <p id="detailMessage" class="muted"></p>
+          </div>
+          <div class="detail-actions">
+            <button id="rerunButton" class="secondary-button" title="Chạy lại đề tài này">Chạy lại</button>
+            <button id="deleteButton" class="secondary-button danger-button" title="Xóa lượt nghiên cứu này">Xóa</button>
+            <span id="detailStatus" class="status-pill">CHỜ XỬ LÝ</span>
+          </div>
+        </div>
+        <div class="progress-track"><div id="progressBar"></div></div>
+        <div class="detail-layout">
+          <nav id="stageRail" class="stage-rail"></nav>
+          <div class="detail-content">
+            <div class="metric-strip">
+              <div><span>Tiến độ</span><strong id="progressValue">0%</strong></div>
+              <div><span>Giai đoạn</span><strong id="stageValue">Tiền kiểm</strong></div>
+              <div><span>Mã lượt chạy</span><strong id="runValue">—</strong></div>
+            </div>
+            <div id="artifactBox" class="artifact-box">
+              <p class="eyebrow">KẾT QUẢ ĐẦU RA</p>
+              <div id="artifactList" class="artifact-list">Các tệp kết quả (code, biểu đồ, LaTeX) sẽ xuất hiện khi tiến trình chạy.</div>
+            </div>
+            <div id="paperViewer" class="paper-viewer hidden">
+              <div class="paper-heading">
+                <div><p class="eyebrow">XUẤT BẢN KHOA HỌC</p><h3>Bài báo hoàn chỉnh (PDF)</h3></div>
+                <a id="paperLink" class="paper-link" target="_blank" rel="noreferrer">Mở file PDF ↗</a>
+              </div>
+              <iframe id="paperFrame" title="Bài báo khoa học được tạo"></iframe>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+    <footer>
+      <span>DeepScientist / Nền tảng nghiên cứu khoa học tự động</span>
+      <span>Dựa trên bằng chứng thực tế · Minh bạch dữ liệu · Khả năng tái lập</span>
+    </footer>
+  </div>
+  <script src="/assets/app.js"></script>
+</body>
+</html>

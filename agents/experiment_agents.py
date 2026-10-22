@@ -9,87 +9,92 @@ if hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 if hasattr(sys.stderr, "reconfigure"):
     sys.stderr.reconfigure(encoding="utf-8", errors="replace")
-
 from core.gemini_llm import GeminiLLM
 
+def extract_json_from_text(text: str) -> Dict[str, Any]:
+    match = re.search(r"```(?:json)?\s*(\{.*?\})\s*```", text, re.DOTALL)
+    if match:
+        target = match.group(1)
+    else:
+        first_b = text.find("{")
+        last_b = text.rfind("}")
+        target = text[first_b:last_b + 1] if (first_b != -1 and last_b != -1) else ""
+    return json.loads(target)
 
 class ExperimentDesigner:
-    """
-    Tác nhân thiết kế thực nghiệm khoa học (Experiment Designer):
-    Xác định giả thuyết kiểm định, bộ dữ liệu (dataset/benchmark), baselines và metrics.
-    """
-
     def __init__(self, llm: GeminiLLM):
         self.llm = llm
 
     def design(self, problem_info: Dict[str, Any], method_info: Dict[str, Any]) -> Dict[str, Any]:
-        prompt = f"""You are an elite empirical AI researcher designing experiments for an ICLR/NeurIPS paper.
+        prob_desc = problem_info.get("problem", "AI Research Problem")
+        method_name = method_info.get("method_name", "Proposed Method")
+        abbr = method_info.get("abbreviation") or method_info.get("method_abbr") or "Ours"
+        formulation = method_info.get("mathematical_formulation", "")
+        procedure = method_info.get("algorithmic_procedure", [])
 
-PROBLEM:
-{problem_info.get('problem')}
+        prompt = f"""You are an elite empirical AI scientist designing an experiment protocol for a top-tier paper.
 
-METHOD:
-Name: {method_info.get('method_name')} ({method_info.get('abbreviation')})
-Formulation: {method_info.get('mathematical_formulation')}
-Procedure: {json.dumps(method_info.get('algorithmic_procedure', []))}
-""" + """
+### RESEARCH TOPIC & METHOD:
+Problem / Domain: {prob_desc}
+Proposed Method: {method_name} ({abbr})
+Mathematical Formulation: {formulation}
+Procedure: {json.dumps(procedure)}
+
 ### TASK:
-Design a rigorous, realistic, and executable experimental setup to validate the method.
-Specify:
-1. Core Empirical Hypotheses.
-2. Baselines for comparison (e.g. Standard Baseline, Variant A, Variant B).
-3. Quantitative Evaluation Metrics (e.g. Accuracy, F1, Loss, Latency, Convergence Steps).
-4. Ablation Study structure (e.g. w/o key component).
-5. Visualizations needed (Figure 1: Convergence/Learning Dynamics, Figure 2: Comparative Performance Benchmark, Figure 3: Ablation Study / Sensitivity Analysis).
+Design a rigorous, realistic, and executable experimental setup tailored strictly to this specific domain and method.
+Do NOT force deep learning epoch concepts if the topic is non-iterative (e.g. graph algorithms, statistics, causal inference, optimization).
 
-Respond strictly in valid JSON format:
+Specify:
+1. Core Empirical Hypotheses to validate.
+2. Meaningful Baselines for comparison (Vanilla Baseline, Competitive SOTA, Proposed Method).
+3. Quantitative Evaluation Metrics that make sense for this problem.
+4. Essential Visualizations (2 to 4 figures depending on complexity, e.g. primary benchmark comparison, algorithm dynamics, ablation/parameter sensitivity, error residual distribution).
+5. Lightweight Simulation Specification (must run in < 30 seconds on a standard machine using synthetic/benchmark data).
+
+### RESPONSE FORMAT (Valid JSON only):
 ```json
-{
+{{
   "hypotheses": ["H1: ...", "H2: ..."],
-  "baselines": ["Baseline-Vanilla", "SOTA-Competitive", "Proposed"],
-  "metrics": ["Accuracy (%)", "Loss", "Convergence Epochs"],
-  "figure_descriptions": {
-    "figure_1": "Learning curves / loss dynamics comparing Proposed method against Baselines over training epochs",
-    "figure_2": "Quantitative benchmark comparison of Proposed method vs Baselines on empirical metrics",
-    "figure_3": "Ablation study and parameter sensitivity / error distribution analysis"
-  },
-  "simulation_specification": "Instructions on creating a synthetic or benchmark evaluation environment"
-}
+  "baselines": ["Standard Baseline", "Competitive Model", "{abbr}"],
+  "metrics": ["Metric_1", "Metric_2"],
+  "figure_specifications": [
+    {{"id": "figure_1", "title": "Performance Comparison", "description": "Quantitative benchmark comparison against baselines", "plot_type": "bar"}},
+    {{"id": "figure_2", "title": "Empirical Dynamics", "description": "Convergence or progress trajectory over steps/iterations", "plot_type": "line"}},
+    {{"id": "figure_3", "title": "Ablation and Sensitivity", "description": "Component contribution or parameter sensitivity analysis", "plot_type": "line/bar/scatter"}}
+  ],
+  "simulation_specification": "Description of the lightweight evaluation setup"
+}}
 ```
 """
         response_text = self.llm.generate(prompt)
-        match = re.search(r"```(?:json)?\s*(\{.*?\})\s*```", response_text, re.DOTALL)
-        if match:
-            response_text = match.group(1)
-        else:
-            first_b = response_text.find("{")
-            last_b = response_text.rfind("}")
-            if first_b != -1 and last_b != -1:
-                response_text = response_text[first_b:last_b + 1]
-
         try:
-            return json.loads(response_text)
-        except Exception:
+            data = extract_json_from_text(response_text)
+            if "figure_descriptions" not in data and "figure_specifications" in data:
+                data["figure_descriptions"] = {
+                    fig.get("id", f"figure_{idx+1}"): fig.get("description", fig.get("title", ""))
+                    for idx, fig in enumerate(data.get("figure_specifications", []))
+                }
+            return data
+        except Exception as e:
+            print(f"[ExperimentDesigner] WARNING: Failed to parse LLM JSON ({e}). Falling back to context-aware defaults.")
             return {
-                "hypotheses": ["Proposed method achieves lower loss and faster convergence."],
-                "baselines": ["Standard Baseline", "Ablated Model", "Proposed Method"],
-                "metrics": ["Loss", "Accuracy (%)", "Generalization Score"],
+                "hypotheses": [f"{abbr} outperforms standard baselines on efficiency and primary objective."],
+                "baselines": [f"Baseline-{prob_desc[:25]}", f"{abbr} (Proposed)"],
+                "metrics": ["Primary Objective Score", "Relative Improvement (%)", "Runtime (s)"],
+                "figure_specifications": [
+                    {"id": "figure_1", "title": "Performance Comparison", "description": "Comparison against baselines", "plot_type": "bar"},
+                    {"id": "figure_2", "title": "Empirical Dynamics", "description": "Convergence or parameter sensitivity", "plot_type": "line"},
+                    {"id": "figure_3", "title": "Ablation Analysis", "description": "Component contribution analysis", "plot_type": "bar"}
+                ],
                 "figure_descriptions": {
-                    "figure_1": "Training and validation convergence curves over epochs",
-                    "figure_2": "Performance benchmark comparison vs baselines",
-                    "figure_3": "Ablation study and sensitivity analysis"
+                    "figure_1": "Comparison against baselines",
+                    "figure_2": "Convergence or parameter sensitivity",
+                    "figure_3": "Component contribution analysis"
                 },
-                "simulation_specification": "Evaluate on multi-dimensional synthetic representations."
+                "simulation_specification": f"Lightweight synthetic simulation evaluating {prob_desc} under controlled parameters."
             }
 
-
 class CoderAgent:
-    """
-    Tác nhân lập trình tự động (Coder Agent, kế thừa triết lý Aider của Sakana AI):
-    Tự động viết mã Python thực nghiệm hoàn chỉnh, có thể chạy trực tiếp trên Windows (CPU hoặc GPU),
-    xuất file số liệu `metrics.json`, `notes.txt` và biểu đồ trực quan `.png`.
-    """
-
     def __init__(self, llm: GeminiLLM):
         self.llm = llm
 
@@ -100,54 +105,34 @@ class CoderAgent:
         experiment_design: Dict[str, Any],
         error_context: str = ""
     ) -> str:
-        prompt = f"""You are an expert Python machine learning engineer and research scientist.
-Your task is to write a clean, robust, self-contained Python script named `run_experiment.py`.
+        prompt = f"""You are an expert scientific Python engineer.
+Write a clean, self-contained Python script named `run_experiment.py`.
 
-### SCIENTIFIC SPECIFICATION:
+### RESEARCH CONTEXT:
 Problem: {problem_info.get('problem')}
-Method: {method_info.get('method_name')} ({method_info.get('abbreviation')})
-Procedure: {json.dumps(method_info.get('algorithmic_procedure', []))}
+Method: {method_info.get('method_name')} ({method_info.get('abbreviation') or method_info.get('method_abbr', '')})
 Baselines: {json.dumps(experiment_design.get('baselines', []))}
 Metrics: {json.dumps(experiment_design.get('metrics', []))}
+Desired Figures: {json.dumps(experiment_design.get('figure_specifications') or experiment_design.get('figure_descriptions', []))}
 
-### STRICT EXECUTION REQUIREMENTS:
-1. **Self-Contained & Lightweight**:
-   - Use standard scientific libraries: `numpy`, `torch` (or pure numpy/scipy), `matplotlib`, `json`, `os`.
-   - The script must run seamlessly and quickly (< 30 seconds) on standard Windows hardware without external API calls or giant datasets.
-   - Use synthetic/benchmark data generator (e.g. multi-class synthetic clusters, noisy regression, or embedded vectors) that mirrors the scientific task.
-2. **Execute Baselines vs Proposed Method**:
-   - Implement the baseline methods and the proposed method according to the scientific procedure.
-   - Train/run iterations and log metrics across epochs/steps.
-3. **Mandatory Outputs**:
-   The script MUST save the following files in the CURRENT WORKING DIRECTORY:
-   - `metrics.json`: JSON dictionary with numerical results (e.g. test metrics for each baseline, final scores, statistics).
-   - `notes.txt`: Human-readable summary of experiment findings and numerical takeaways.
-   - `figure_1.png`: Clean, publication-quality Matplotlib plot (DPI 300, Seaborn/academic style) showing convergence curves / loss dynamics over epochs from real training logs.
-   - `figure_2.png`: Clean, publication-quality Matplotlib plot (DPI 300, bar chart or scatter) showing the comparative evaluation vs baselines using actual empirical test metrics.
-   - `figure_3.png`: Clean, publication-quality Matplotlib plot (DPI 300) showing ablation study / parameter sensitivity or error distribution.
-4. **No Interactive Windows**:
-   - Use `matplotlib.use('Agg')` at the very top so no GUI window pops up.
+### STRICT REQUIREMENTS:
+1. **Lightweight & Fast**: Must run in < 30 seconds on CPU. Use synthetic/reproducible data.
+2. **Domain-Appropriate Execution**:
+   - If iterative (e.g. neural nets, RL): track progress over iterations.
+   - If non-iterative (e.g. tree models, optimization, causal, graph): compute actual comparative metrics directly. Do NOT invent fake epoch loops if unnecessary.
+3. **Mandatory Outputs in Current Directory**:
+   - `metrics.json`: Dictionary containing numerical results for all baselines and metrics.
+   - `notes.txt`: Brief summary of scientific takeaways.
+   - Publication-grade figures: Save Matplotlib plots with DPI 300 (`figure_1.png`, `figure_2.png`, `figure_3.png`, etc.) matching the experimental design.
+4. **Headless Execution**: Use `import matplotlib; matplotlib.use('Agg')` at the very top.
 """
         if error_context:
-            prompt += f"""
-### FIX RUNTIME ERROR:
-Previous execution crashed with this error:
-{error_context}
+            prompt += f"\n### FIX RUNTIME ERROR:\n{error_context}\nPlease fix the traceback and return the complete corrected script.\n"
 
-Please analyze the traceback, fix all syntax and runtime issues, and provide the updated complete script.
-"""
-
-        prompt += """
-### RESPONSE FORMAT:
-Provide the Python code inside a single ```python ... ``` markdown code block. Do NOT include extraneous conversational filler.
-"""
-        response_text = self.llm.generate(prompt)
-        match = re.search(r"```(?:python)?\s*(.*?)\s*```", response_text, re.DOTALL)
-        if match:
-            code = match.group(1).strip()
-        else:
-            code = response_text.strip()
-        return code
+        prompt += "\nReturn ONLY the executable Python script inside a single ```python ... ``` block."
+        res = self.llm.generate(prompt)
+        match = re.search(r"```(?:python)?\s*(.*?)\s*```", res, re.DOTALL)
+        return match.group(1).strip() if match else res.strip()
 
     def modify_template_code(
         self,
@@ -156,38 +141,31 @@ Provide the Python code inside a single ```python ... ``` markdown code block. D
         experiment_design: Dict[str, Any],
         error_context: str = ""
     ) -> str:
-        prompt = f"""You are an elite PyTorch engineer and research scientist implementing a proposed AI innovation.
+        prompt = f"""You are an elite PyTorch engineer upgrading a baseline experiment script with a novel scientific method.
 
-### EXISTING BASELINE EXPERIMENT CODE:
+### BASELINE CODE:
 ```python
 {base_code}
 ```
 
-### PROPOSED METHOD TO IMPLEMENT (from ResearchAgent):
-Method Name: {method_info.get('method_name')} ({method_info.get('method_abbr', '')})
-Algorithmic Steps: {method_info.get('method', '')}
+### NOVEL METHOD TO IMPLEMENT:
+Name: {method_info.get('method_name')} ({method_info.get('method_abbr', '')})
 Mathematical Formulation: {method_info.get('mathematical_formulation', '')}
-Theoretical Rationale: {method_info.get('method_rationale', '')}
+Procedure: {method_info.get('method', '')}
 
 ### INSTRUCTIONS:
-Upgrade the baseline code by integrating the proposed method:
-1. Modify the PyTorch neural network architecture or loss function to include the proposed mechanism.
-2. Keep the script executable with `--out_dir=run_0` flag.
-3. Ensure it runs smoothly and saves `final_info.json` and `history.json` into `--out_dir`.
-4. Return the COMPLETE, executable Python script.
+1. Integrate the proposed method into the architecture or training logic.
+2. Keep the script executable with `--out_dir=run_0` / `--out_dir=run_1`.
+3. Save `final_info.json` and `history.json` into `--out_dir`.
+4. Ensure fast execution and zero syntax errors.
+5. Hardware Agnostic: Support both CPU and CUDA safely. Use `device = "cuda" if torch.cuda.is_available() else "cpu"`. NEVER hardcode `device = "cuda"` without checking `torch.cuda.is_available()`.
 """
         if error_context:
-            prompt += f"""
-### RUNTIME ERROR TO FIX:
-{error_context}
-Please fix all errors and return the working script.
-"""
+            prompt += f"\n### RUNTIME ERROR TO FIX:\n{error_context}\n"
         prompt += "\nProvide the updated Python code inside a single ```python ... ``` block."
-        response_text = self.llm.generate(prompt)
-        match = re.search(r"```(?:python)?\s*(.*?)\s*```", response_text, re.DOTALL)
-        if match:
-            return match.group(1).strip()
-        return response_text.strip()
+        res = self.llm.generate(prompt)
+        match = re.search(r"```(?:python)?\s*(.*?)\s*```", res, re.DOTALL)
+        return match.group(1).strip() if match else res.strip()
 
     def adapt_or_generate_plot_code(
         self,
@@ -197,14 +175,8 @@ Please fix all errors and return the working script.
         experiment_design: Dict[str, Any],
         metrics_data: Dict[str, Any]
     ) -> str:
-        """
-        Tùy biến hoặc sinh mới script plot.py để đảm bảo figure_1.png, figure_2.png và figure_3.png
-        phản ánh CHÍNH XÁC dữ liệu thực nghiệm thật, domain, tên phương pháp, và các metric của đề tài,
-        TUYỆT ĐỐI KHÔNG HARDCODE SỐ LIỆU GIẢ HOẶC DÁN NHẦM HÌNH CHÉO DOMAIN.
-        """
-        try:
-            prompt = f"""You are an elite scientific data visualization expert and Python engineer.
-Review and write a complete, standalone `plot.py` script that reads REAL EXPERIMENT DATA and generates 3 publication-grade figures (`figure_1.png`, `figure_2.png`, `figure_3.png`).
+        prompt = f"""You are an elite scientific data visualization expert and Python engineer.
+Review and write a complete, standalone `plot.py` script that reads REAL EXPERIMENT DATA (`run_1/history.json`, `run_0/history.json`, `metrics.json`) and generates publication-grade figures (`figure_1.png`, `figure_2.png`, etc.).
 
 ### RESEARCH CONTEXT:
 Topic / Problem: {problem_info.get('problem', '')}
@@ -220,56 +192,30 @@ Empirical Metrics Obtained: {json.dumps(metrics_data)}
 
 ### STRICT DATA-GROUNDING & PUBLICATION REQUIREMENTS:
 1. **NO FAKE OR HARDCODED ABLATION MATH**:
-   - STRICT PROHIBITION: You MUST NEVER invent fake ablation scores using hardcoded subtraction like [score, score - 4.5, score - 8.2] or [val, val - 0.042, val - 0.065]!
-   - If true multi-run ablation data is not logged in history.json, DO NOT generate a fake ablation bar chart. Instead, design Figure 3 around REAL domain-specific data: residual error distributions, actual activation curves, feature importance, or prediction trajectory overlays!
-
-2. **DOMAIN-AWARE VISUALIZATIONS (Tailored to {problem_info.get('problem', '')})**:
-   - For Neural Architectures / SciML / KAN:
-     * Figure 1: Convergence trajectory (Train & Val Loss) with clean scientific grid.
-     * Figure 2: Ground Truth vs Predicted function approximation overlay $y(x)$ vs $\\hat{{y}}(x)$, or parity scatter plot with $R^2$ annotation.
-     * Figure 3: Parameter efficiency (Loss vs Number of Parameters) or Error Residual Distribution (Histogram with fitted KDE).
-   - For Causal Inference / Healthcare / Observational Studies:
-     * Figure 1: Propensity score overlap or Training convergence.
-     * Figure 2: Covariate Balance (Love Plot of ASMD before vs after weighting).
-     * Figure 3: Estimated Average Treatment Effect (ATE) with 95% confidence intervals.
-   - For Time-Series Forecasting:
-     * Figure 1: Training & validation convergence loss.
-     * Figure 2: Multi-step forecasting test horizon vs Ground Truth.
-     * Figure 3: Residual error distribution across forecast lookback windows.
-
-3. **DYNAMIC DATA INGESTION**:
-   - The script must dynamically inspect `run_1/history.json`, `run_0/history.json`, and `run_1/final_info.json` (or `metrics.json`).
-   - Use actual recorded keys from `metrics_data`: {json.dumps(metrics_data)}.
-
-4. **CONVERGENCE PLOTTING & EPOCH ALIGNMENT**:
-   - `history.json` contains arrays like `"train_loss"` and `"val_loss"`. It does NOT have a separate `"epochs"` key.
-   - ALWAYS derive the epochs array from `train_loss`:
+   - STRICT PROHIBITION: You MUST NEVER invent fake ablation scores using hardcoded subtraction.
+   - If true multi-run ablation data is not logged in history.json, design figures around REAL domain-specific data: residual distributions, actual activations, feature importance, or prediction trajectory overlays.
+2. **DOMAIN-AWARE VISUALIZATIONS**:
+   - Tailor plots to {problem_info.get('problem', '')}.
+   - Do NOT assume every model has training epochs if not found in history logs.
+3. **CONVERGENCE & DYNAMIC EPOCH DERIVATION**:
+   - If `train_loss` is in `history.json`, always derive epochs safely:
      `epochs = list(range(1, len(history.get("train_loss", [])) + 1))`
-   - NEVER create an empty or mismatched `epochs` array. Ensure `len(epochs) == len(train_loss)`. If plotting fallback synthetic curves, ensure `len(epochs_list) == len(train_loss)`.
-
-5. **TECHNICAL CONSTRAINTS**:
-   - Place `import matplotlib; matplotlib.use("Agg")` at the very top.
-   - Save figures as `figure_1.png`, `figure_2.png`, `figure_3.png` with `dpi=300` and `plt.tight_layout()`.
-   - Never pop up GUI windows.
+4. **TECHNICAL CONSTRAINTS**:
+   - `import matplotlib; matplotlib.use("Agg")` at the top.
+   - Save figures as `figure_1.png`, `figure_2.png`, `figure_3.png`, etc. with `dpi=300` and `plt.tight_layout()`.
 
 Provide ONLY the executable Python script inside a single ```python ... ``` block.
 """
-            response_text = self.llm.generate(prompt)
-            match = re.search(r"```(?:python)?\s*(.*?)\s*```", response_text, re.DOTALL)
-            if match:
-                return match.group(1).strip()
-            return response_text.strip()
+        try:
+            res = self.llm.generate(prompt)
+            match = re.search(r"```(?:python)?\s*(.*?)\s*```", res, re.DOTALL)
+            return match.group(1).strip() if match else res.strip()
         except Exception as e:
-            print(f"[CoderAgent] Lưu ý khi tùy biến plot code: {e}")
+            print(f"[CoderAgent] Warning during plot adaptation: {e}")
             return base_plot_code
 
 
-
 class ExperimentRunner:
-    """
-    Điều phối chạy mã thực nghiệm, tự động kiểm tra lỗi và gọi CoderAgent sửa lỗi (Self-healing loop).
-    """
-
     def __init__(self, coder: CoderAgent, max_fix_attempts: int = 3):
         self.coder = coder
         self.max_fix_attempts = max_fix_attempts
@@ -286,7 +232,7 @@ class ExperimentRunner:
 
         error_context = ""
         for attempt in range(self.max_fix_attempts):
-            print(f"[ExperimentRunner] Đang sinh mã thực nghiệm (Lần thử {attempt + 1}/{self.max_fix_attempts})...")
+            print(f"[ExperimentRunner] Generating experiment code (Attempt {attempt + 1}/{self.max_fix_attempts})...")
             code = self.coder.generate_code(
                 problem_info=problem_info,
                 method_info=method_info,
@@ -297,7 +243,7 @@ class ExperimentRunner:
             with open(script_path, "w", encoding="utf-8") as f:
                 f.write(code)
 
-            print(f"[ExperimentRunner] Đang chạy {script_path}...")
+            print(f"[ExperimentRunner] Executing {script_path}...")
             try:
                 result = subprocess.run(
                     [sys.executable, "run_experiment.py"],
@@ -307,26 +253,28 @@ class ExperimentRunner:
                     timeout=120
                 )
                 if result.returncode == 0:
-                    # Kiểm tra xem các file kết quả đã được sinh ra chưa
-                    has_metrics = os.path.exists(os.path.join(work_dir, "metrics.json"))
-                    has_fig1 = os.path.exists(os.path.join(work_dir, "figure_1.png"))
-                    has_fig2 = os.path.exists(os.path.join(work_dir, "figure_2.png"))
-                    has_fig3 = os.path.exists(os.path.join(work_dir, "figure_3.png"))
+                    metrics_path = os.path.join(work_dir, "metrics.json")
+                    has_metrics = os.path.exists(metrics_path)
+                    generated_figures = [f for f in os.listdir(work_dir) if f.endswith(".png")]
 
-                    if has_metrics and has_fig1 and has_fig2:
-                        print("[ExperimentRunner] Thực nghiệm chạy THÀNH CÔNG! Đã tạo metrics và biểu đồ trực quan.")
+                    if has_metrics and len(generated_figures) >= 1:
+                        print(f"[ExperimentRunner] Experiment SUCCESS: metrics.json and {len(generated_figures)} figures generated ({generated_figures}).")
                         metrics_data = {}
                         try:
-                            with open(os.path.join(work_dir, "metrics.json"), "r", encoding="utf-8") as mf:
+                            with open(metrics_path, "r", encoding="utf-8") as mf:
                                 metrics_data = json.load(mf)
                         except Exception:
                             pass
                         return True, result.stdout, metrics_data
                     else:
-                        error_context = f"Script ran with exit code 0 but missing files. has_metrics={has_metrics}, has_fig1={has_fig1}, has_fig2={has_fig2}, has_fig3={has_fig3}. Stdout: {result.stdout}"
+                        error_context = (
+                            f"Script ran with exit code 0 but missing files. "
+                            f"has_metrics={has_metrics}, generated_figures_count={len(generated_figures)}. "
+                            f"Stdout: {result.stdout}"
+                        )
                 else:
                     error_context = f"Exit code {result.returncode}.\nStderr: {result.stderr}\nStdout: {result.stdout}"
-                    print(f"[ExperimentRunner] Lỗi thực thi: {result.stderr[:200]}...")
+                    print(f"[ExperimentRunner] Execution failed: {result.stderr[:200]}...")
 
             except subprocess.TimeoutExpired:
                 error_context = "Script execution timed out after 120 seconds. Make the simulation lighter and faster!"

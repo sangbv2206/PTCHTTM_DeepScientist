@@ -2,10 +2,21 @@ import hashlib
 import json
 import os
 import re
+import sys
 import urllib.parse
 import xml.etree.ElementTree as ET
 from typing import Dict, List, Optional, Any
 import requests
+
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+if hasattr(sys.stderr, "reconfigure"):
+    sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+
+
+def normalize_paper_title(title: str) -> str:
+    """Chuẩn hóa tiêu đề bài báo để khử trùng lặp chính xác (loại bỏ dấu câu và khoảng trắng thừa)."""
+    return re.sub(r"[^\w\s]", "", title.lower()).strip()
 
 
 def reconstruct_openalex_abstract(inverted_index: Optional[Dict[str, List[int]]]) -> str:
@@ -27,6 +38,31 @@ def generate_stable_corpusid(title: str, prefix: int = 900) -> int:
     h = hashlib.md5(title.strip().lower().encode("utf-8")).hexdigest()
     num_part = int(h[:6], 16) % 900000
     return prefix * 1000000 + num_part
+
+
+def check_internet_connection(timeout: float = 2.0) -> bool:
+    """
+    Kiểm tra nhanh kết nối Internet tới OpenAlex hoặc arXiv (Fast Ping timeout 2s).
+    Trả về True nếu kết nối thành công, False nếu mất mạng hoàn toàn.
+    """
+    test_urls = [
+        "https://api.openalex.org",
+        "https://export.arxiv.org",
+        "https://1.1.1.1"
+    ]
+    for url in test_urls:
+        try:
+            resp = requests.head(url, timeout=timeout)
+            if resp.status_code < 500:
+                return True
+        except Exception:
+            try:
+                resp = requests.get(url, timeout=timeout)
+                if resp.status_code < 500:
+                    return True
+            except Exception:
+                continue
+    return False
 
 
 class ExternalPaperRetriever:
@@ -51,11 +87,15 @@ class ExternalPaperRetriever:
             "User-Agent": f"DeepScientist/1.0 (mailto:{self.email})"
         }
 
-    def search_openalex(self, query: str, limit: int = 6) -> List[Dict[str, Any]]:
+    def search_openalex(self, query: str, limit: int = 30) -> List[Dict[str, Any]]:
         """
         Tìm kiếm bài báo khoa học qua OpenAlex Works API (100% Miễn phí, không cần Key).
         """
-        encoded_query = urllib.parse.quote_plus(query.strip())
+        clean_q = query.strip()
+        words = clean_q.split()
+        if len(words) > 12:
+            clean_q = " ".join(words[:12])
+        encoded_query = urllib.parse.quote_plus(clean_q)
         url = f"https://api.openalex.org/works?search={encoded_query}&per-page={limit}&sort=relevance_score:desc"
         
         papers = []
@@ -104,13 +144,16 @@ class ExternalPaperRetriever:
 
         return papers
 
-    def search_arxiv(self, query: str, limit: int = 5) -> List[Dict[str, Any]]:
+    def search_arxiv(self, query: str, limit: int = 20) -> List[Dict[str, Any]]:
         """
         Tìm kiếm bài báo qua arXiv API (XML Atom Feed, chuyên sâu AI/ML/CS).
         """
         clean_q = re.sub(r"[^\w\s]", " ", query).strip()
+        words = clean_q.split()
+        if len(words) > 10:
+            clean_q = " ".join(words[:10])
         encoded_query = urllib.parse.quote_plus(clean_q)
-        url = f"http://export.arxiv.org/api/query?search_query=all:{encoded_query}&start=0&max_results={limit}&sortBy=relevance&sortOrder=descending"
+        url = f"https://export.arxiv.org/api/query?search_query=all:{encoded_query}&start=0&max_results={limit}&sortBy=relevance&sortOrder=descending"
 
         papers = []
         try:
@@ -208,17 +251,18 @@ class ExternalPaperRetriever:
     def fetch_papers_for_topic(
         self, 
         topic: str, 
-        limit: int = 8, 
-        semantic_scholar_key: Optional[str] = None
+        limit: int = 35, 
+        semantic_scholar_key: Optional[str] = None,
+        save_cache: bool = False
     ) -> List[Dict[str, Any]]:
         """
         Chiến lược đa nguồn thông minh:
         1. Thử Semantic Scholar nếu có API Key.
         2. Tìm trên OpenAlex (ưu tiên số 1 vì tốc độ và độ bao phủ toàn diện).
         3. Nếu thiếu bài, bổ sung từ arXiv.
-        4. Hợp nhất, loại bỏ trùng lặp và lưu vào cache offline.
+        4. Hợp nhất, loại bỏ trùng lặp và trả về danh sách bài mới nhất.
         """
-        print(f"[ExternalRetriever] Dang tim kiem tai lieu hoc thuat thuc te cho chu de: '{topic}'...")
+        print(f"[ExternalRetriever] Đang tìm kiếm tài liệu học thuật trực tuyến cho chủ đề: '{topic}'...")
         all_papers: List[Dict[str, Any]] = []
         seen_titles = set()
 
@@ -226,7 +270,7 @@ class ExternalPaperRetriever:
         if semantic_scholar_key:
             s2_papers = self.search_semantic_scholar(topic, limit=limit, api_key=semantic_scholar_key)
             for p in s2_papers:
-                t_norm = p["title"].lower().strip()
+                t_norm = normalize_paper_title(p["title"])
                 if t_norm not in seen_titles:
                     seen_titles.add(t_norm)
                     all_papers.append(p)
@@ -235,7 +279,7 @@ class ExternalPaperRetriever:
         if len(all_papers) < limit:
             oa_papers = self.search_openalex(topic, limit=limit)
             for p in oa_papers:
-                t_norm = p["title"].lower().strip()
+                t_norm = normalize_paper_title(p["title"])
                 if t_norm not in seen_titles:
                     seen_titles.add(t_norm)
                     all_papers.append(p)
@@ -244,14 +288,15 @@ class ExternalPaperRetriever:
         if len(all_papers) < limit:
             arxiv_papers = self.search_arxiv(topic, limit=limit)
             for p in arxiv_papers:
-                t_norm = p["title"].lower().strip()
+                t_norm = normalize_paper_title(p["title"])
                 if t_norm not in seen_titles:
                     seen_titles.add(t_norm)
                     all_papers.append(p)
 
         if all_papers:
-            print(f"[ExternalRetriever] Da thu thap thanh cong {len(all_papers)} bai bao khoa hoc thuc te tu mang!")
-            self.save_to_cache(all_papers)
+            print(f"[ExternalRetriever] Thu thập thành công {len(all_papers)} bài báo khoa học thực tế từ mạng!")
+            if save_cache:
+                self.save_to_cache(all_papers)
 
         return all_papers[:limit]
 
@@ -259,6 +304,7 @@ class ExternalPaperRetriever:
         """Lưu bài báo vào cache JSONL để tái sử dụng offline."""
         os.makedirs(self.cache_dir, exist_ok=True)
         existing_cids = set()
+        existing_titles = set()
         
         if os.path.exists(self.cache_file):
             try:
@@ -268,6 +314,8 @@ class ExternalPaperRetriever:
                             p = json.loads(line)
                             if p.get("corpusid"):
                                 existing_cids.add(p["corpusid"])
+                            if p.get("title"):
+                                existing_titles.add(normalize_paper_title(p["title"]))
             except Exception:
                 pass
 
@@ -275,9 +323,11 @@ class ExternalPaperRetriever:
         with open(self.cache_file, "a", encoding="utf-8") as f:
             for p in papers:
                 cid = p.get("corpusid")
-                if cid and cid not in existing_cids:
+                t_norm = normalize_paper_title(p.get("title", ""))
+                if cid and cid not in existing_cids and t_norm and t_norm not in existing_titles:
                     f.write(json.dumps(p, ensure_ascii=False) + "\n")
                     existing_cids.add(cid)
+                    existing_titles.add(t_norm)
                     new_count += 1
 
         if new_count > 0:

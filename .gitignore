@@ -25,3 +25,8 @@ Thumbs.db
 *.log
 *.out
 *.toc
+
+# Ket qua thuc nghiem va file tam
+output/
+scratch/
+test_run/

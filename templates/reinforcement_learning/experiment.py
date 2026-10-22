@@ -155,6 +155,9 @@ def train_rl_agent(
     episode_rewards = []
     td_losses = []
     convergence_episode = None
+    total_steps_executed = 0
+
+    t_start = time.time()
 
     for episode in range(1, num_episodes + 1):
         state = env.reset()
@@ -176,6 +179,7 @@ def train_rl_agent(
             replay_buffer.push(state, action, reward, next_state, done)
             state = next_state
             total_reward += reward
+            total_steps_executed += 1
 
             # Mini-batch gradient step
             if len(replay_buffer) >= batch_size:
@@ -215,16 +219,24 @@ def train_rl_agent(
             if np.mean(episode_rewards[-10:]) >= 180.0:
                 convergence_episode = episode
 
+    elapsed = max(0.001, time.time() - t_start)
     mean_last_20 = float(np.mean(episode_rewards[-20:]))
     max_reward = float(np.max(episode_rewards))
     final_loss = float(np.mean(td_losses[-10:]))
+    throughput = round(total_steps_executed / elapsed, 2)
+    s_per_kstep = round((elapsed / max(1, total_steps_executed)) * 1000, 3)
 
     return {
         "mean_episode_reward": round(mean_last_20, 2),
         "max_episode_reward": round(max_reward, 2),
         "convergence_episode": convergence_episode if convergence_episode else num_episodes,
         "final_td_loss": round(final_loss, 4),
+        "total_steps_executed": total_steps_executed,
+        "elapsed_seconds": round(elapsed, 2),
+        "throughput_steps_per_sec": throughput,
+        "s_per_1000_steps": s_per_kstep,
         "episodes_trained": num_episodes,
+        "seed": seed,
         "training_dynamics": {
             "episode_rewards": episode_rewards,
             "td_losses": td_losses,
@@ -237,24 +249,49 @@ def main():
     parser.add_argument("--out_dir", type=str, default="run_0", help="Directory to save experimental artifacts")
     parser.add_argument("--episodes", type=int, default=100, help="Number of training episodes")
     parser.add_argument("--lr", type=float, default=1e-3, help="Learning rate")
+    parser.add_argument("--seeds", type=str, default="42", help="Comma-separated random seeds (e.g., '42,123,456')")
     args = parser.parse_args()
 
     os.makedirs(args.out_dir, exist_ok=True)
-    start_time = time.time()
-    results = train_rl_agent(num_episodes=args.episodes, lr=args.lr)
-    elapsed = time.time() - start_time
-    results["elapsed_seconds"] = round(elapsed, 2)
+    seed_list = [int(s.strip()) for s in args.seeds.split(",") if s.strip()]
+
+    all_seed_results = []
+    for s in seed_list:
+        print(f"[RL Experiment] Running training on seed {s}...")
+        res = train_rl_agent(num_episodes=args.episodes, lr=args.lr, seed=s)
+        all_seed_results.append(res)
+
+    # Aggregate across seeds
+    rewards = [r["mean_episode_reward"] for r in all_seed_results]
+    losses = [r["final_td_loss"] for r in all_seed_results]
+    convergences = [r["convergence_episode"] for r in all_seed_results]
+    throughputs = [r["throughput_steps_per_sec"] for r in all_seed_results]
+    total_steps = [r["total_steps_executed"] for r in all_seed_results]
+    total_elapsed = sum(r["elapsed_seconds"] for r in all_seed_results)
+
+    final_results = dict(all_seed_results[0])  # primary seed fields
+    final_results["mean_episode_reward"] = round(float(np.mean(rewards)), 2)
+    final_results["reward_std"] = round(float(np.std(rewards)), 2)
+    final_results["final_td_loss"] = round(float(np.mean(losses)), 4)
+    final_results["loss_std"] = round(float(np.std(losses)), 4)
+    final_results["convergence_episode"] = round(float(np.mean(convergences)), 1)
+    final_results["throughput_steps_per_sec"] = round(float(np.mean(throughputs)), 2)
+    final_results["total_steps_executed"] = int(np.sum(total_steps))
+    final_results["elapsed_seconds"] = round(total_elapsed, 2)
+    final_results["num_seeds"] = len(seed_list)
+    final_results["all_seeds"] = seed_list
 
     # Save final info JSON
     info_path = os.path.join(args.out_dir, "final_info.json")
     with open(info_path, "w", encoding="utf-8") as f:
-        json.dump(results, f, indent=2)
+        json.dump(final_results, f, indent=2)
 
-    print(f"[RL Experiment] Training complete in {elapsed:.2f}s.")
-    print(f"Mean Reward (Last 20): {results['mean_episode_reward']}")
-    print(f"Max Episode Reward: {results['max_episode_reward']}")
-    print(f"Convergence Episode: {results['convergence_episode']}")
-    print(f"Final TD Loss: {results['final_td_loss']}")
+    print(f"[RL Experiment] Multi-seed evaluation completed ({len(seed_list)} seed(s)).")
+    print(f"Mean Reward: {final_results['mean_episode_reward']} +/- {final_results['reward_std']}")
+    print(f"Convergence Episode: {final_results['convergence_episode']}")
+    print(f"Final TD Loss: {final_results['final_td_loss']} +/- {final_results['loss_std']}")
+    print(f"Throughput: {final_results['throughput_steps_per_sec']} steps/sec (Total: {final_results['total_steps_executed']} steps)")
+    print(f"Total Elapsed Time: {final_results['elapsed_seconds']}s")
 
 
 if __name__ == "__main__":

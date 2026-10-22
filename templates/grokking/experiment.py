@@ -297,7 +297,7 @@ def evaluate(model, val_loader, device, num_eval_batches):
     return metrics
 
 
-def run(out_dir, dataset, seed_offset):
+def run(out_dir, dataset, seed_offset, num_total_updates=3000):
     os.makedirs(out_dir, exist_ok=True)
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     torch.manual_seed(1337 + seed_offset)
@@ -325,7 +325,6 @@ def run(out_dir, dataset, seed_offset):
     )
     num_train_batches = 10
     num_eval_batches = 8
-    num_total_updates = 7500
     warmup_steps = 50
     scheduler = torch.optim.lr_scheduler.LambdaLR(
         optimizer, lr_lambda=lambda s: min(s / warmup_steps, 1)
@@ -373,24 +372,23 @@ def run(out_dir, dataset, seed_offset):
 
 parser = argparse.ArgumentParser(description="Run experiment")
 parser.add_argument("--out_dir", type=str, default="run_0", help="Output directory")
+parser.add_argument("--num_updates", type=int, default=3000, help="Number of training updates per dataset/seed")
+parser.add_argument("--datasets", type=str, default="x_plus_y,x_div_y", help="Comma-separated datasets")
+parser.add_argument("--seeds_per_dataset", type=int, default=2, help="Number of seeds per dataset")
 args = parser.parse_args()
 
 if __name__ == "__main__":
-    num_seeds = {
-        "x_div_y": 3,
-        "x_plus_y": 3,
-        "x_minus_y": 3,
-        "permutation": 3,
-    }
+    dataset_list = [d.strip() for d in args.datasets.split(",") if d.strip()]
+    num_seeds = {d: args.seeds_per_dataset for d in dataset_list}
 
     out_dir = args.out_dir
     all_results = {}
     final_infos = {}
-    for dataset in ["x_div_y", "x_minus_y", "x_plus_y", "permutation"]:
+    for dataset in dataset_list:
         final_info_list = []
         for seed_offset in range(num_seeds[dataset]):
             print(f"Running {dataset} with seed offset {seed_offset}")
-            final_info, train_info, val_info = run(args.out_dir, dataset, seed_offset)
+            final_info, train_info, val_info = run(args.out_dir, dataset, seed_offset, num_total_updates=args.num_updates)
             all_results[f"{dataset}_{seed_offset}_final_info"] = final_info
             all_results[f"{dataset}_{seed_offset}_train_info"] = train_info
             all_results[f"{dataset}_{seed_offset}_val_info"] = val_info
@@ -408,8 +406,17 @@ if __name__ == "__main__":
             "final_info_dict": final_info_dict,
         }
 
+    # Flat top-level summary metrics for downstream parser and claim ledger compatibility
+    val_accs = [v["means"]["final_val_acc_mean"] for v in final_infos.values() if isinstance(v, dict) and "means" in v]
+    val_losses = [v["means"]["final_val_loss_mean"] for v in final_infos.values() if isinstance(v, dict) and "means" in v]
+    steps_99 = [v["means"]["step_val_acc_99_mean"] for v in final_infos.values() if isinstance(v, dict) and "means" in v]
+    if val_accs:
+        final_infos["final_val_acc"] = round(float(np.mean(val_accs)), 4)
+        final_infos["final_val_loss"] = round(float(np.mean(val_losses)), 4)
+        final_infos["step_val_acc_99"] = round(float(np.mean(steps_99)), 1)
+
     with open(os.path.join(out_dir, "final_info.json"), "w") as f:
-        json.dump(final_infos, f)
+        json.dump(final_infos, f, indent=2)
 
     with open(os.path.join(out_dir, "all_results.npy"), "wb") as f:
         np.save(f, all_results)

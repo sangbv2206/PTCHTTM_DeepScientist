@@ -1,283 +1,212 @@
-# DeepScientist: Hệ Thống Tự Động Hóa Nghiên Cứu Khoa Học Bằng Mô Hình Ngôn Ngữ Lớn
+# DeepScientist
 
-<p align="center">
-  <b>Hệ thống nghiên cứu khoa học tự chủ (Autonomous Scientific Discovery) tích hợp Multi-Agent LLM</b><br>
-  <i>Tự động phát hiện khoảng trống nghiên cứu, đề xuất giải pháp toán học, lập trình thực nghiệm PyTorch, xuất bài báo LaTeX/PDF và phản biện học thuật độc lập.</i>
-</p>
+Hệ thống tự động hóa thực nghiệm và viết bài báo khoa học dựa trên kiến trúc Multi-Agent kết hợp mô hình ngôn ngữ lớn (LLM).
 
----
+Dự án nhận đầu vào là một đề tài nghiên cứu dưới dạng văn bản tự nhiên, sau đó tự động:
+1. Đề xuất giả thuyết khoa học và phương pháp cải tiến.
+2. Viết mã nguồn mô hình bằng PyTorch và chạy huấn luyện đối sánh với baseline.
+3. Trích xuất chỉ số thực nghiệm, đối soát kết quả bằng ClaimLedger để tránh suy diễn sai lệch.
+4. Tự động vẽ biểu đồ trực quan hóa kết quả.
+5. Soạn thảo toàn văn bài báo theo định dạng LaTeX chuẩn hội nghị quốc tế và biên dịch ra file PDF.
 
-## 1. Tổng Quan Dự Án
-
-**DeepScientist** là một hệ thống AI đa tác nhân (Multi-Agent System) nhằm tự động hóa khép kín toàn bộ chu trình nghiên cứu khoa học từ ý tưởng ban đầu cho đến khi xuất bản bài báo hoàn chỉnh. Hệ thống kế thừa và tích hợp tinh hoa từ hai công trình nghiên cứu nổi tiếng thế giới:
-
-1. **ResearchAgent (NAACL 2025)**: Cơ chế khai phá tri thức học thuật từ cơ sở dữ liệu thực tế (hàng chục nghìn bài báo và đồ thị thực thể liên kết), ứng dụng mô hình tranh biện đa tác nhân (Multi-Agent Debate) để phát hiện khoảng trống nghiên cứu (research gap), định hình vấn đề và tinh chỉnh phương pháp luận.
-2. **The AI Scientist (Sakana AI, 2024)**: Kiến trúc tự động hóa thực nghiệm: tự sinh mã nguồn mô hình, chạy huấn luyện định lượng với PyTorch, tự động vẽ biểu đồ đối sánh khoa học đa chiều (multi-figure plotting), biên soạn bài báo toàn văn chuẩn học thuật bằng LaTeX/PDF và mô phỏng hội đồng phản biện mù đôi (Double-Blind Peer Review) theo chuẩn các hội nghị hàng đầu (ICLR, NeurIPS, ICML).
+Dự án cung cấp cả giao diện Web (FastAPI + Server-Sent Events) để theo dõi tiến trình thời gian thực và giao diện dòng lệnh (CLI).
 
 ---
 
-## 2. Quy Trình Nghiên Cứu Khép Kín 7 Giai Đoạn
+## Mục lục
 
-Quy trình vận hành của DeepScientist được điều phối một cách chặt chẽ qua 7 giai đoạn:
+- [Kiến trúc hệ thống](#kiến-trúc-hệ-thống)
+- [Quy trình xử lý 8 giai đoạn](#quy-trình-xử-lý-8-giai-đoạn)
+- [Các lĩnh vực nghiên cứu hỗ trợ](#các-lĩnh-vực-nghiên-cứu-hỗ-trợ)
+- [Cấu trúc thư mục](#cấu-trúc-thư-mục)
+- [Yêu cầu hệ thống](#yêu-cầu-hệ-thống)
+- [Hướng dẫn cài đặt](#hướng-dẫn-cài-đặt)
+- [Hướng dẫn sử dụng](#hướng-dẫn-sử-dụng)
+
+---
+
+## Kiến trúc hệ thống
+
+Hệ thống gồm 3 tầng chính:
+
+1. **Giao diện người dùng (Frontend):**
+   - Viết bằng HTML, CSS và JavaScript thuần, không phụ thuộc framework nặng.
+   - Kết nối với backend qua REST API và Server-Sent Events (SSE) để nhận log huấn luyện và trạng thái từng bước theo thời gian thực.
+   - Tích hợp trình xem trước ảnh biểu đồ và xem trực tiếp bài báo PDF.
+
+2. **Máy chủ dịch vụ (Backend API):**
+   - Xây dựng bằng FastAPI và Uvicorn.
+   - Quản lý các phiên chạy (runs) dưới dạng background task, quản lý luồng dữ liệu SSE và phục vụ tệp tĩnh/kết quả thực nghiệm.
+
+3. **Lõi xử lý đa tác tử (Multi-Agent Pipeline):**
+   - `ScientistAgent`: Phân tích bài toán, xác định hạn chế của baseline và đề xuất giả thuyết cải tiến.
+   - `CoderAgent`: Trực tiếp chỉnh sửa mã nguồn mô hình trong `experiment.py`, bổ sung kiến trúc hoặc thuật toán mới.
+   - `ClaimLedger`: Module đọc log thực nghiệm, tính toán độ lệch định lượng giữa baseline và mô hình mới. Cơ chế này buộc Agent viết bài phải trích dẫn đúng số liệu thực tế, không đưa ra kết luận phóng đại khi kết quả không cải thiện đáng kể.
+   - `UniversalPlotter`: Tự động đọc dữ liệu huấn luyện và vẽ các biểu đồ đối sánh (`loss_curve.png`, `metric_comparison.png`).
+   - `LaTeXWriter`: Soạn thảo toàn văn mã nguồn LaTeX dựa trên cấu trúc bài báo hội nghị (NeurIPS / ICLR), tự động đồng bộ citation từ kho trích dẫn thực tế và gọi `pdflatex` biên dịch PDF.
+   - `PeerReviewer`: Đóng vai trò phản biện độc lập, đánh giá bài báo theo thang điểm và tiêu chí học thuật.
+
+---
+
+## Quy trình xử lý 8 giai đoạn
+
+Quá trình nghiên cứu chạy tuần tự qua các giai đoạn:
 
 ```text
-[Kho Tri Thức Học Thuật (Knowledge Store & OpenAlex/arXiv)]
-                           │
-                           ▼
-  ┌─────────────────────────────────────────────────────────────┐
-  │ Giai đoạn 1: Xác Định Vấn Đề Nghiên Cứu (Ideation Agent)    │
-  └──────────────────────────────┬──────────────────────────────┘
-                                 │
-                                 ▼
-  ┌─────────────────────────────────────────────────────────────┐
-  │ Giai đoạn 2: Phản Biện & Thẩm Định Đề Tài (Validator Agent) │
-  └──────────────────────────────┬──────────────────────────────┘
-                                 │
-                                 ▼
-  ┌─────────────────────────────────────────────────────────────┐
-  │ Giai đoạn 3: Phát Triển Phương Pháp Mới (Method Agent)      │
-  └──────────────────────────────┬──────────────────────────────┘
-                                 │
-                                 ▼
-  ┌─────────────────────────────────────────────────────────────┐
-  │ Giai đoạn 4: Phản Biện Phương Pháp & Toán Học (Validator)   │
-  └──────────────────────────────┬──────────────────────────────┘
-                                 │
-                                 ▼
-  ┌─────────────────────────────────────────────────────────────┐
-  │ Giai đoạn 5: Lập Trình Thực Nghiệm, Huấn Luyện & Vẽ Biểu Đồ │
-  │              (Coder Agent - PyTorch & Matplotlib Engine)     │
-  └──────────────────────────────┬──────────────────────────────┘
-                                 │
-                                 ▼
-  ┌─────────────────────────────────────────────────────────────┐
-  │ Giai đoạn 6: Soạn Thảo Toàn Văn LaTeX & Tự Động Biên Dịch   │
-  │              (LaTeX Writer Agent - pdflatex Compilation)     │
-  └──────────────────────────────┬──────────────────────────────┘
-                                 │
-                                 ▼
-  ┌─────────────────────────────────────────────────────────────┐
-  │ Giai đoạn 7: Phản Biện Học Thuật Độc Lập (Peer Reviewer)   │
-  │              (Conference Double-Blind Review - ICLR Format) │
-  └─────────────────────────────────────────────────────────────┘
+[Đề tài đầu vào]
+       │
+       ▼
+Giai đoạn 0: Khởi tạo & Định tuyến (Routing)
+  - Phân tích ngữ nghĩa đề tài bằng Semantic Router.
+  - Chọn template PyTorch phù hợp nhất trong kho template.
+       │
+       ▼
+Giai đoạn 1: Khảo cứu & Hình thành giả thuyết (Hypothesis)
+  - Đánh giá bài toán và đề xuất phương án kiến trúc/thuật toán mới.
+       │
+       ▼
+Giai đoạn 2: Lập trình thực nghiệm (Coding)
+  - CoderAgent can thiệp mã nguồn experiment.py để thêm mô hình đề xuất.
+       │
+       ▼
+Giai đoạn 3: Huấn luyện mô hình & Thu thập số liệu (Training)
+  - Chạy mô hình Baseline và mô hình Cải tiến.
+  - Tự động tương thích với GPU (CUDA) nếu có, hoặc fallback an toàn sang CPU.
+       │
+       ▼
+Giai đoạn 4: Đối soát tuyên bố khoa học (Claim Ledger)
+  - Phân tích bảng số liệu thực tế (MSE, Loss, Accuracy, thời gian train).
+  - Khóa số liệu để ngăn chặn hiện tượng hallucination trong bài viết.
+       │
+       ▼
+Giai đoạn 5: Trực quan hóa dữ liệu (Plotting)
+  - Xuất các file biểu đồ phục vụ bài báo.
+       │
+       ▼
+Giai đoạn 6: Soạn thảo bài báo LaTeX (Paper Drafting)
+  - Viết toàn văn bài báo bằng tiếng Anh học thuật chuẩn LaTeX 2 cột.
+       │
+       ▼
+Giai đoạn 7: Phản biện học thuật & Xuất bản PDF (Review & Compilation)
+  - Chấm điểm bài báo và chạy pdflatex tạo file PDF cuối cùng.
 ```
-
-### Chi tiết các giai đoạn:
-- **Giai đoạn 1 (Problem Identification)**: Khai phá cơ sở tri thức cục bộ và tìm kiếm trực tuyến (OpenAlex, arXiv, Semantic Scholar) để tìm các bài báo hạt giống (seed papers), phân tích hạn chế của các phương pháp hiện tại và đề xuất vấn đề nghiên cứu mới.
-- **Giai đoạn 2 (Problem Validation)**: Hội đồng phản biện đánh giá vấn đề qua 6 tiêu chí: *Topic Fidelity (Bám sát đề tài)*, *Clarity (Tính rõ ràng)*, *Relevance (Tính phù hợp)*, *Originality (Tính mới)*, *Feasibility (Tính khả thi)* và *Significance (Ý nghĩa thực tiễn)* qua nhiều vòng tranh biện.
-- **Giai đoạn 3 (Method Development)**: Thiết kế giải pháp kỹ thuật chi tiết, xây dựng công thức toán học chặt chẽ, luận giải trực giác lý thuyết và đặt tên thuật toán mới.
-- **Giai đoạn 4 (Method Validation)**: Phản biện tính đúng đắn toán học, độ phức tạp tính toán, tính bám sát đề tài và tính khả thi khi cài đặt thực nghiệm.
-- **Giai đoạn 5 (Experimentation & Plotting)**: Tự động đưa thuật toán vào mã nguồn thử nghiệm, thực thi huấn luyện mô hình với PyTorch, ghi nhận metrics qua từng epoch và vẽ 3 biểu đồ khoa học (`figure_1.png`, `figure_2.png`, `figure_3.png`).
-- **Giai đoạn 6 (LaTeX Writeup & PDF Compilation)**: Viết toàn văn bài báo khoa học bằng LaTeX theo định dạng hội nghị 2 cột chuẩn mực, tích hợp tài liệu tham khảo BibTeX và gọi trình biên dịch `pdflatex` để xuất ra file `paper.pdf` hoàn chỉnh.
-- **Giai đoạn 7 (Peer Review)**: Mô phỏng hội đồng chấm điểm khoa học độc lập đọc toàn bộ bài báo và kết quả định lượng, chấm điểm trên thang 1-10 và đưa ra phán quyết (Accept/Reject) kèm các phân tích sâu sắc.
 
 ---
 
-## 3. Cấu Trúc Thư Mục Dự Án
+## Các lĩnh vực nghiên cứu hỗ trợ
+
+Hệ thống sử dụng các bộ template benchmark định sẵn trong thư mục `templates/`:
+
+1. **Dự báo chuỗi thời gian (`time_series_forecasting`)**:
+   - Kiến trúc: GRU, LSTM, Temporal CNN, Multi-Step Linear.
+   - Bài toán mẫu: Dự báo phụ tải điện, mực nước lũ, tín hiệu cảm biến môi trường.
+2. **Xử lý ngôn ngữ tự nhiên (`nanoGPT`, `nanoGPT_lite`)**:
+   - Kiến trúc: Transformer Decoder-only (dạng GPT).
+   - Bài toán mẫu: Tối ưu cơ chế Attention, so sánh LayerNorm vs RMSNorm, nén mô hình.
+3. **Y tế & Thử nghiệm lâm sàng giả lập (`causal_trial_emulation`)**:
+   - Phương pháp: Target Trial Emulation, suy luận nhân quả (Causal Inference), cân bằng biến nhiễu IPTW, Propensity Score, phân tích sống còn (Survival Analysis).
+   - Bài toán mẫu: So sánh hiệu quả thuốc điều trị, đánh giá nguy cơ phơi nhiễm môi trường.
+4. **Học tăng cường (`reinforcement_learning`)**:
+   - Kiến trúc: Deep Q-Network (DQN, Double DQN, Dueling DQN), Policy Gradient.
+   - Bài toán mẫu: Môi trường điều khiển liên tục (CartPole).
+5. **Mô hình tạo sinh khuếch tán (`2d_diffusion`)**:
+   - Kiến trúc: Denoising Diffusion Probabilistic Models (DDPM 2D).
+   - Bài toán mẫu: Thử nghiệm lịch trình nhiễu (Noise Scheduler), tốc độ sinh mẫu.
+6. **Lý thuyết học sâu (`grokking`)**:
+   - Kiến trúc: Modular Arithmetic Neural Network.
+   - Bài toán mẫu: Nghiên cứu hiện tượng tổng quát hóa trễ (delayed generalization) và tác động của Weight Decay.
+
+---
+
+## Cấu trúc thư mục
 
 ```text
 DeepScientist/
-├── agents/                         # Các tác nhân AI chuyên trách
-│   ├── research_agents.py          # Formulate & Validate bài toán, phương pháp, thực nghiệm (6 tiêu chí)
-│   ├── experiment_agents.py        # CoderAgent (PyTorch) & PlottingAgent (Matplotlib khoa học)
-│   ├── latex_writer.py             # Biên soạn toàn văn LaTeX, Title Guardrail & biên dịch PDF
-│   ├── peer_reviewer.py            # Phản biện học thuật độc lập theo chuẩn ICLR/NeurIPS
-│   ├── ideation_agents.py          # Tác nhân đề xuất vấn đề nghiên cứu
-│   └── method_agents.py            # Tác nhân phát triển phương pháp toán học
-├── core/                           # Thành phần lõi của hệ thống
-│   ├── gemini_llm.py               # LLM Wrapper hỗ trợ luân chuyển model tự động
-│   ├── knowledge_store.py          # Quản lý đồ thị tri thức, BM25, đo độ phủ dữ liệu kép
-│   ├── knowledge_engine.py         # Trích xuất tri thức, sinh trích dẫn BibTeX chuẩn
-│   └── external_retriever.py       # Tìm kiếm trực tuyến từ OpenAlex, arXiv, Semantic Scholar
-├── data/                           # Dữ liệu tri thức học thuật
-│   ├── papers.jsonl                # Tập dữ liệu hàng nghìn bài báo khoa học
-│   ├── knowledge.jsonl             # Đồ thị thực thể và khái niệm khoa học liên kết
-│   ├── references.jsonl            # Danh mục bài báo tham khảo bổ sung (37,900+ bài)
-│   └── external_papers_cache.jsonl # Bộ nhớ đệm các bài báo tải từ Internet
-├── pipeline/
-│   └── orchestrator.py             # Bộ điều phối toàn bộ chu trình 7 giai đoạn
-├── templates/                      # Kho 15 mẫu mã thực nghiệm chuyên sâu (PyTorch)
-│   ├── template_manager.py         # Scoring Router v2 định tuyến đề tài thông minh
-│   ├── nanoGPT/                    # Mẫu kiến trúc mạng Transformer / Neural Network
-│   ├── causal_trial_emulation/     # Mẫu suy luận nhân quả, hồi quy sống còn, ASMD, ATE
-│   ├── time_series_forecasting/    # Mẫu dự báo chuỗi thời gian đa biến
-│   ├── 2d_diffusion/               # Mẫu mô hình khuếch tán hình ảnh (DDPM)
-│   ├── gnn_graph_learning/         # Mẫu học sâu trên đồ thị (GNN, GCN, GAT)
-│   ├── seir/                       # Mẫu mô phỏng dịch tễ học và hệ ODE
-│   ├── mobilenetV3/                # Mẫu thị giác máy tính & CNN
-│   ├── recommender_system/         # Mẫu hệ thống gợi ý & lọc cộng tác
-│   ├── reinforcement_learning/     # Mẫu học tăng cường (DQN, Continuous Control)
-│   └── ...
-├── output/                         # Thư mục lưu trữ thành phẩm sau mỗi lần chạy
-├── Dockerfile                      # Cấu hình đóng gói ứng dụng kèm TeX Live
-├── docker-compose.yml              # Cấu hình chạy nhanh bằng Docker Compose
-├── main.py                         # Điểm khởi chạy chương trình (CLI)
-├── requirements.txt                # Danh sách thư viện Python cần thiết
-└── README.md                       # Tài liệu hướng dẫn sử dụng tiếng Việt
+├── agents/                    # Mã nguồn các tác tử AI (Coder, Writer, Reviewer, Researcher)
+├── core/                      # Các thành phần nền tảng (ClaimLedger, Plotter, Gemini LLM, Contracts)
+├── data/                      # Cơ sở dữ liệu trích dẫn khoa học thực tế (.jsonl)
+├── pipeline/                  # Bộ điều phối quy trình (orchestrator.py, domain_registry.py)
+├── templates/                 # Kho template mô hình PyTorch (nanoGPT, time_series, causal...)
+├── web/                       # Mã nguồn giao diện Web (index.html, styles.css, app.js)
+├── api_server.py              # Server FastAPI xử lý API và Server-Sent Events
+├── run_web.py                 # Script chạy nhanh ứng dụng Web
+├── main.py                    # Script chạy pipeline qua dòng lệnh (CLI)
+├── requirements.txt           # Danh sách thư viện Python phụ thuộc
+├── .env.example               # Mẫu biến môi trường
+└── README.md                  # Tài liệu hướng dẫn kỹ thuật
 ```
 
 ---
 
-## 4. Chi Tiết Thành Phẩm Đầu Ra (Output Artifacts)
+## Yêu cầu hệ thống
 
-Mỗi lần chạy nghiên cứu, hệ thống sẽ tự động tạo một thư mục độc lập theo mốc thời gian tại `output/run_<YYYYMMDD_HHMMSS>/`. Bên trong chứa đầy đủ tất cả các thành phẩm học thuật bao gồm mã nguồn, biểu đồ, bài báo PDF và nhận xét phản biện:
-
-```text
-output/run_20260924_060712/
-├── experiment/
-│   ├── experiment.py           # Mã nguồn baseline ban đầu của mẫu thực nghiệm
-│   ├── experiment_upgraded.py  # Mã nguồn Python đã tích hợp thuật toán mới đề xuất
-│   ├── plot.py                 # Mã nguồn tự động vẽ 3 biểu đồ chuẩn học thuật
-│   ├── prompt.json             # Đặc tả chi tiết ý tưởng và chỉ dẫn cài đặt
-│   ├── figure_1.png            # Biểu đồ động học huấn luyện (Loss / Accuracy / Convergence)
-│   ├── figure_2.png            # Biểu đồ đối sánh hiệu năng định lượng (Đề xuất vs Baseline)
-│   ├── figure_3.png            # Biểu đồ phân tích độ nhạy hoặc thử nghiệm loại trừ (Ablation)
-│   ├── run_0/                  # Dữ liệu metrics và checkpoint vòng lặp huấn luyện thứ nhất
-│   └── run_1/                  # Dữ liệu metrics và checkpoint vòng lặp huấn luyện thứ hai
-├── latex/
-│   ├── paper.tex               # Toàn văn mã nguồn bài báo định dạng LaTeX 2 cột (6-8 trang)
-│   ├── references.bib          # Danh mục tài liệu trích dẫn chuẩn BibTeX đầy đủ
-│   ├── paper.pdf               # BÀI BÁO KHOA HỌC HOÀN CHỈNH ĐƯỢC BIÊN DỊCH BẰNG PDFLATEX
-│   ├── figure_1.png, 2, 3      # Các hình ảnh biểu đồ được nhúng trực tiếp vào văn bản
-│   └── paper.aux, .bbl, .log   # Các tệp phụ trợ sinh ra trong quá trình biên dịch TeX
-├── review/
-│   ├── peer_review.md          # Biên bản nhận xét phản biện chi tiết theo mẫu ICLR/NeurIPS
-│   └── peer_review.json        # Điểm số định lượng (Soundness, Presentation, Novelty) & phán quyết
-└── preflight_assessment.json   # Bản tổng kết trạng thái thẩm định các giai đoạn của quy trình
-```
-
-### Chi tiết các tệp quan trọng:
-- **`paper.pdf`**: Tác phẩm cốt lõi của nghiên cứu — một bài báo khoa học tiêu chuẩn dài 6-8 trang gồm đầy đủ Abstract, Introduction, Related Work, Method (có công thức toán học LaTeX đẹp mắt), Experiments (có nhúng 3 biểu đồ PNG và bảng số liệu so sánh), Conclusion và References.
-- **`experiment_upgraded.py`**: File mã nguồn Python hoàn chỉnh và độc lập, người dùng có thể tự chạy lại bất cứ lúc nào bằng `python experiment_upgraded.py` để tái lập kết quả huấn luyện.
-- **`figure_1.png`, `figure_2.png`, `figure_3.png`**: Bộ 3 biểu đồ chất lượng cao (300 DPI, font khoa học) phục vụ minh họa bài báo.
-- **`peer_review.md`**: Đánh giá chi tiết từ "hội đồng phản biện AI" độc lập chỉ ra các điểm mạnh (Strengths), điểm yếu (Weaknesses), câu hỏi chất vấn (Questions) và khuyến nghị cải thiện.
+- **Hệ điều hành:** Windows 10/11, Linux (Ubuntu 20.04+), hoặc macOS.
+- **Python:** 3.10 trở lên.
+- **Phần cứng:** Tối thiểu 8GB RAM. Có thể chạy hoàn toàn trên CPU thông thường hoặc tận dụng GPU NVIDIA nếu có CUDA.
+- **Trình biên dịch LaTeX (Bắt buộc nếu cần xuất file PDF):**
+  - Windows: Cài đặt [MiKTeX](https://miktex.org/).
+  - Linux: Cài đặt gói TeX Live (`sudo apt install texlive-full`).
+  - *Lưu ý:* Nếu máy chưa cài LaTeX, hệ thống vẫn xuất đầy đủ mã nguồn `.tex` và hình ảnh trong thư mục kết quả.
 
 ---
 
-## 5. Hướng Dẫn Sử Dụng Với Docker
+## Hướng dẫn cài đặt
 
-### Cách 1: Sử dụng Docker Compose (Khuyến nghị)
+1. Clone mã nguồn về máy:
+   ```bash
+   git clone https://github.com/sangbv2206/PTCHTTM_DeepScientist.git
+   cd PTCHTTM_DeepScientist
+   ```
 
-#### Bước 1: Chuẩn bị API Key
-Đăng ký lấy Google Gemini API Key hoàn toàn miễn phí tại [Google AI Studio](https://aistudio.google.com/).
+2. Tạo và kích hoạt môi trường ảo Python:
+   ```bash
+   # Trên Windows
+   python -m venv venv
+   venv\Scripts\activate
 
-Tạo tệp `.env` tại thư mục gốc của dự án:
-```env
-GEMINI_API_KEY=.....
-```
+   # Trên Linux / macOS
+   python3 -m venv venv
+   source venv/bin/activate
+   ```
 
-#### Bước 2: Xây dựng Docker Image
-Mở terminal tại thư mục dự án và chạy:
-```bash
-docker compose build
-```
+3. Cài đặt các thư viện cần thiết:
+   ```bash
+   pip install -r requirements.txt
+   ```
 
-#### Bước 3: Khởi chạy nghiên cứu
-
-**Cách A: Chạy với chủ đề mặc định cấu hình sẵn:**
-```bash
-docker compose up
-```
-
-**Cách B: Chạy với chủ đề nghiên cứu tùy chọn theo ý bạn (Khuyên dùng):**
-```bash
-docker compose run --rm deepscientist --topic "Kolmogorov-Arnold Networks KAN for Scientific Machine Learning"
-```
-
-Hoặc thử nghiệm các đề tài học thuật khác:
-```bash
-docker compose run --rm deepscientist --topic "Graph Neural Networks for Drug-Target Interaction"
-```
-
-> [!TIP]
-> Nhờ cấu hình `volumes: - ./output:/app/output` trong `docker-compose.yml`, toàn bộ bài báo `paper.pdf`, biểu đồ `.png` và mã nguồn sẽ được đồng bộ trực tiếp ra thư mục `output/` ngay trên máy tính của bạn khi container chạy xong!
+4. Cấu hình biến môi trường:
+   - Sao chép file mẫu `.env.example` thành `.env`:
+     ```bash
+     cp .env.example .env
+     ```
+   - Mở file `.env` và điền Google Gemini API Key:
+     ```env
+     GEMINI_API_KEY=your_actual_gemini_api_key_here
+     GEMINI_MODEL=gemini-3.5-flash-lite
+     ```
 
 ---
 
-### Cách 2: Sử dụng Docker CLI thuần
+## Hướng dẫn sử dụng
 
-Nếu không dùng Docker Compose, bạn có thể build và run trực tiếp bằng lệnh Docker:
+### Cách 1: Sử dụng giao diện Web
 
-#### 1. Build image:
+Khởi động máy chủ:
 ```bash
-docker build -t deepscientist:latest .
+python run_web.py
 ```
 
-#### 2. Run container:
+Mở trình duyệt truy cập: `http://localhost:8000`
 
-**Trên PowerShell (Windows):**
-```powershell
-docker run --rm -it `
-  --env-file .env `
-  -v ${PWD}/output:/app/output `
-  -v ${PWD}/data:/app/data `
-  deepscientist:latest --topic "Kolmogorov-Arnold Networks KAN for Scientific Machine Learning"
-```
+- Nhập tên đề tài nghiên cứu (có thể nhập bằng tiếng Việt hoặc tiếng Anh).
+- Chọn số vòng lặp (`Max Iterations`) và bấm **Bắt đầu nghiên cứu**.
+- Theo dõi log huấn luyện, biểu đồ và đọc bài báo PDF trực tiếp trên giao diện.
 
-**Trên Linux / macOS (Bash / Zsh):**
+### Cách 2: Sử dụng dòng lệnh (CLI)
+
+Chạy trực tiếp pipeline qua file `main.py`:
 ```bash
-docker run --rm -it \
-  --env-file .env \
-  -v $(pwd)/output:/app/output \
-  -v $(pwd)/data:/app/data \
-  deepscientist:latest --topic "Kolmogorov-Arnold Networks KAN for Scientific Machine Learning"
+python main.py --topic "Dự báo phụ tải tiêu thụ điện trong lưới điện thông minh" --max_iters 1
 ```
 
----
-
-## 6. Hướng Dẫn Cài Đặt & Chạy Trực Tiếp Trên Máy Tính (Native Python)
-
-Nếu bạn không muốn sử dụng Docker mà muốn chạy trực tiếp bằng môi trường Python trên máy:
-
-### 6.1. Yêu cầu hệ thống
-- **Python**: Phiên bản 3.10 trở lên.
-- **Trình biên dịch TeX (Bắt buộc để biên dịch PDF)**:
-  - Trên **Windows**: Cài đặt [MiKTeX](https://miktex.org/) hoặc [TeX Live](https://www.tug.org/texlive/). Đảm bảo lệnh `pdflatex` đã có trong biến môi trường PATH.
-  - Trên **Ubuntu/Debian**: `sudo apt-get install texlive-latex-base texlive-latex-extra texlive-fonts-recommended`
-  - Trên **macOS**: Cài đặt [MacTeX](https://www.tug.org/mactex/).
-
-### 6.2. Cài đặt thư viện Python
-```bash
-pip install -r requirements.txt
-```
-
-### 6.3. Cấu hình khóa API
-Tạo file `.env` tại thư mục gốc:
-```env
-GEMINI_API_KEY=AIzaSyYourGeminiApiKeyHere...
-```
-
-### 6.4. Các lệnh thực thi
-
-**Chạy với chủ đề tự chọn:**
-```bash
-python main.py --topic "Kolmogorov-Arnold Networks KAN for Scientific Machine Learning"
-```
-
-**Chạy với chủ đề tự động gợi ý từ tập tri thức:**
-```bash
-python main.py
-```
-
-**Chạy ở chế độ ngoại tuyến hoàn toàn (chỉ dùng dữ liệu trong `data/`, không gọi API ngoài):**
-```bash
-python main.py --topic "Graph Convolutional Networks" --offline
-```
-
----
-
-## 7. Bảng Tham Số Dòng Lệnh (CLI Options)
-
-| Tham số | Giá trị mặc định | Giải thích chi tiết |
-| :--- | :--- | :--- |
-| `--topic` | `None` (Tự chọn từ data) | Chủ đề nghiên cứu khoa học muốn AI thực hiện |
-| `--api-key` | Đọc từ `.env` | Google Gemini API Key (hoặc truyền qua biến môi trường `GEMINI_API_KEY`) |
-| `--model` | `gemini-2.0-flash` | Tên mô hình Gemini sử dụng (`gemini-2.0-flash`, `gemini-1.5-flash`,...) |
-| `--template` | `None` (Tự động chọn) | Mẫu thực nghiệm cơ sở (`nanoGPT`, `causal_trial_emulation`, `time_series_forecasting`,...) |
-| `--iterations` | `2` | Số vòng lặp tranh biện và phản biện học thuật cho vấn đề & phương pháp |
-| `--output-dir` | `./output` | Đường dẫn thư mục xuất thành phẩm |
-| `--data-dir` | `./data` | Đường dẫn thư mục chứa dữ liệu tri thức học thuật |
-| `--offline` | `False` | Tùy chọn chạy offline, không tìm kiếm bài báo trực tuyến từ OpenAlex/arXiv |
-| `--semantic-scholar-key` | `None` | Semantic Scholar API Key (tùy chọn, nâng cao hạn mức tìm kiếm) |
-
----
+Kết quả của từng lượt chạy (gồm mã nguồn thí nghiệm, biểu đồ, file LaTeX và file PDF) được lưu tự động trong thư mục `output/run_<mã_phiên>/`.

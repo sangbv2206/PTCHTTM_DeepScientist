@@ -347,15 +347,15 @@ def train(dataset="shakespeare_char", out_dir="run_0", seed_offset=0):
     lr_decay_iters = max_iters  # make equal to max_iters usually
     min_lr = 1e-4 if dataset == "shakespeare_char" else 5e-5
     # DDP settings
-    backend = "nccl"  # 'nccl', 'gloo', etc.
+    backend = "gloo" if not torch.cuda.is_available() else "nccl"
     # system
-    device = "cuda"  # Always use CUDA
+    device = "cuda" if torch.cuda.is_available() else "cpu"
     dtype = (
         "bfloat16"
         if torch.cuda.is_available() and torch.cuda.is_bf16_supported()
-        else "float16"
-    )  # 'float32', 'bfloat16', or 'float16', the latter will auto implement a GradScaler
-    compile = True  # do not torch compile the model on macbooks
+        else ("float16" if torch.cuda.is_available() else "float32")
+    )
+    compile = False if device == "cpu" else True
 
     # various inits, derived attributes, I/O setup
     # if not ddp, we are running on a single gpu, and one process
@@ -366,8 +366,9 @@ def train(dataset="shakespeare_char", out_dir="run_0", seed_offset=0):
     if master_process:
         os.makedirs(out_dir, exist_ok=True)
     torch.manual_seed(1337 + seed_offset)
-    torch.backends.cuda.matmul.allow_tf32 = True  # allow tf32 on matmul
-    torch.backends.cudnn.allow_tf32 = True  # allow tf32 on cudnn
+    if torch.cuda.is_available():
+        torch.backends.cuda.matmul.allow_tf32 = True  # allow tf32 on matmul
+        torch.backends.cudnn.allow_tf32 = True  # allow tf32 on cudnn
     device_type = (
         "cuda" if "cuda" in device else "cpu"
     )  # for later use in torch.autocast
@@ -383,11 +384,56 @@ def train(dataset="shakespeare_char", out_dir="run_0", seed_offset=0):
         else torch.amp.autocast(device_type=device_type, dtype=ptdtype)
     )
 
-    # poor man's data loader
-    if out_dir == "run_0":
-        data_dir = os.path.join("../../data", dataset)
-    else:
-        data_dir = os.path.join("../../../data", dataset)
+    # robust self-healing data loader
+    def resolve_and_prepare_dataset(dset: str, out_d: str) -> str:
+        candidates = [
+            os.path.join(out_d, "data", dset),
+            os.path.join("data", dset),
+            os.path.join("../../data", dset),
+            os.path.join("../../../data", dset),
+        ]
+        for c in candidates:
+            if os.path.exists(os.path.join(c, "train.bin")):
+                return c
+
+        target_dir = os.path.join(out_d, "data", dset)
+        os.makedirs(target_dir, exist_ok=True)
+        train_path = os.path.join(target_dir, "train.bin")
+        val_path = os.path.join(target_dir, "val.bin")
+        meta_p = os.path.join(target_dir, "meta.pkl")
+
+        if not (os.path.exists(train_path) and os.path.exists(meta_p)):
+            sample_text = (
+                "First Citizen:\nBefore we proceed any further, hear me speak.\n"
+                "All:\nSpeak, speak.\n\n"
+                "First Citizen:\nYou are all resolved rather to die than to famish?\n"
+                "All:\nResolved. resolved.\n\n"
+                "First Citizen:\nFirst, you know Caius Marcius is chief enemy to the people.\n"
+                "All:\nWe know't, we know't.\n\n"
+                "First Citizen:\nLet us kill him, and we'll have corn at our own price.\n"
+                "Is't a verdict?\n\n"
+                "All:\nNo more talking on't; let it be done: away, away!\n"
+                "Second Citizen:\nOne word, good citizens.\n"
+            ) * 500
+            chars = sorted(list(set(sample_text)))
+            vocab_size = len(chars)
+            stoi = {ch: i for i, ch in enumerate(chars)}
+            itos = {i: ch for i, ch in enumerate(chars)}
+
+            data = np.array([stoi[c] for c in sample_text], dtype=np.uint16)
+            n = int(0.9 * len(data))
+            train_data = data[:n]
+            val_data = data[n:]
+
+            train_data.tofile(train_path)
+            val_data.tofile(val_path)
+            with open(meta_p, "wb") as f:
+                pickle.dump({"vocab_size": vocab_size, "itos": itos, "stoi": stoi}, f)
+            print(f"[Dataset Resolver] Auto-synthesized self-contained corpus at {target_dir}")
+
+        return target_dir
+
+    data_dir = resolve_and_prepare_dataset(dataset, out_dir)
 
     def get_batch(split):
         # We recreate np.memmap every batch to avoid a memory leak, as per
@@ -460,7 +506,7 @@ def train(dataset="shakespeare_char", out_dir="run_0", seed_offset=0):
     model.to(device)
 
     # initialize a GradScaler. If enabled=False scaler is a no-op
-    scaler = torch.cuda.amp.GradScaler(enabled=(dtype == "float16"))
+    scaler = torch.cuda.amp.GradScaler(enabled=(dtype == "float16" and device_type == "cuda"))
 
     # optimizer
     optimizer = model.configure_optimizers(

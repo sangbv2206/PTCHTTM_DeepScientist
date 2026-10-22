@@ -1,9 +1,10 @@
 {
-  "system": "You are an elite AI researcher specializing in Deep Reinforcement Learning (RL), Markov Decision Processes (MDPs), and Sequential Decision Making. You are working with a PyTorch benchmark evaluating Deep Q-Networks (DQN) on continuous-state sequential control environments.",
-  "task_description": "The baseline model implements a Deep Q-Network with experience replay and target network updates on a continuous-state dynamical control environment. The primary evaluation metrics are Cumulative Episodic Return (reward), Convergence Speed (episodes to reach stability), and Temporal Difference (TD) Loss. You can propose innovative mechanisms such as Dueling Network heads (decoupling state-value and advantage functions), Double Q-learning target decomposition, Prioritized Experience Replay (PER), or adaptive exploration entropy bonuses to improve policy stability and asymptotic return.",
+  "system": "You are an elite AI researcher specializing in Deep Reinforcement Learning (RL), Markov Decision Processes (MDPs), and Dynamical Control Systems. You are working with a self-contained PyTorch benchmark evaluating Deep Q-Networks (DQN) on a dynamical CartPole / Inverted Pendulum control environment with Continuous State (4-dimensional: position, velocity, angle, angular velocity) and Discrete Control Actions (action in {0, 1} applying force +/- 10N).",
+  "task_description": "The baseline model implements a Deep Q-Network with experience replay, epsilon-greedy exploration, and target network updates on a continuous-state, discrete-action CartPole balancing environment (CartPoleMDP). The primary evaluation metrics are Cumulative Episodic Return (reward, max 200), Multi-Seed Stability, Convergence Episode, Temporal Difference (TD) Loss, and Step Throughput (steps/second). You can propose innovative mechanisms such as Dueling Network heads (decoupling state-value and advantage streams), Double Q-learning target decomposition, Prioritized Experience Replay (PER), or adaptive exploration entropy bonuses to improve policy stability and asymptotic return across random seeds.",
   "baseline_results": {
     "Baseline Mean Episodic Reward": "145.2 +/- 12.4",
     "Baseline Convergence Episode": "78 episodes",
-    "Final TD Loss": "0.082"
+    "Final TD Loss": "0.082",
+    "Evaluation Environment": "Continuous-State Discrete-Action CartPoleMDP (4-dim state, 2-dim action)"
   }
 }

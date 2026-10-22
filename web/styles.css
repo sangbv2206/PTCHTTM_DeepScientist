@@ -1,0 +1,857 @@
+@import url('https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&family=Plus+Jakarta+Sans:wght@600;700;800&display=swap');
+
+:root {
+  --ink: #17221f;
+  --muted: #62726b;
+  --paper: #f5f4ef;
+  --panel: #fffefa;
+  --line: #d8ded5;
+  --mint: #d7efe5;
+  --teal: #127460;
+  --orange: #e27645;
+  --shadow: 0 20px 55px rgba(27, 47, 40, .08);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: 'Be Vietnam Pro', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body:before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  opacity: .3;
+  background-image: linear-gradient(rgba(23, 34, 31, .035) 1px, transparent 1px), linear-gradient(90deg, rgba(23, 34, 31, .035) 1px, transparent 1px);
+  background-size: 28px 28px;
+}
+
+.shell {
+  position: relative;
+  max-width: 1320px;
+  margin: auto;
+  padding: 0 42px;
+}
+
+.topbar {
+  height: 82px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--line);
+}
+
+.brand {
+  display: flex;
+  gap: 11px;
+  align-items: center;
+  color: var(--ink);
+  font-weight: 700;
+  text-decoration: none;
+  letter-spacing: -.02em;
+}
+
+.brand-mark {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  background: var(--ink);
+  color: var(--mint);
+  font: 600 13px 'JetBrains Mono', monospace;
+  border-radius: 6px;
+}
+
+.topbar-meta, .muted, .form-message {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.status-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--teal);
+  margin-right: 8px;
+}
+
+.hero {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  padding: 64px 0 54px;
+}
+
+.eyebrow {
+  font: 600 11px 'JetBrains Mono', monospace;
+  letter-spacing: .12em;
+  color: var(--teal);
+  margin: 0 0 12px;
+  text-transform: uppercase;
+}
+
+.hero h1 {
+  font-family: 'Plus Jakarta Sans', 'Be Vietnam Pro', sans-serif;
+  font-weight: 800;
+  font-size: clamp(34px, 5vw, 62px);
+  letter-spacing: -.03em;
+  line-height: 1.15;
+  margin: 0;
+  max-width: 760px;
+}
+
+.hero-copy {
+  font-size: 16px;
+  color: var(--muted);
+  max-width: 560px;
+  line-height: 1.65;
+  margin: 20px 0 0;
+}
+
+.hero-stamp {
+  border: 1px solid rgba(18, 116, 96, 0.25);
+  padding: 16px 20px 14px;
+  min-width: 154px;
+  background: var(--mint);
+  border-radius: 6px;
+  box-shadow: 0 4px 14px rgba(20, 125, 104, 0.08);
+}
+
+.hero-stamp span, .hero-stamp small {
+  display: block;
+  font: 600 11px 'JetBrains Mono', monospace;
+  letter-spacing: .08em;
+}
+
+.hero-stamp strong {
+  display: block;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-weight: 800;
+  font-size: 42px;
+  line-height: 1.1;
+  margin: 8px 0 5px;
+}
+
+.hero-stamp small {
+  color: var(--muted);
+  letter-spacing: 0;
+}
+
+.workspace-grid {
+  display: grid;
+  grid-template-columns: minmax(320px, .82fr) minmax(460px, 1.5fr);
+  gap: 24px;
+}
+
+.panel {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow);
+  border-radius: 8px;
+}
+
+.new-run-panel, .runs-panel {
+  padding: 28px;
+}
+
+.panel-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 24px;
+}
+
+.panel-heading h2, .detail-header h2 {
+  font-family: 'Plus Jakarta Sans', 'Be Vietnam Pro', sans-serif;
+  font-size: 24px;
+  font-weight: 700;
+  letter-spacing: -.02em;
+  margin: 0;
+}
+
+.panel-number {
+  font: 600 13px 'JetBrains Mono', monospace;
+  color: var(--orange);
+}
+
+label {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  margin-bottom: 18px;
+}
+
+textarea, input, select {
+  display: block;
+  width: 100%;
+  border: 1px solid var(--line);
+  background: #fbfbf7;
+  color: var(--ink);
+  font: 400 14px 'Be Vietnam Pro', sans-serif;
+  border-radius: 5px;
+  padding: 12px 14px;
+  margin-top: 8px;
+  outline: none;
+  transition: border-color .15s, box-shadow .15s;
+}
+
+textarea {
+  height: 110px;
+  resize: vertical;
+  line-height: 1.55;
+}
+
+input:focus, textarea:focus, select:focus {
+  border-color: var(--teal);
+  box-shadow: 0 0 0 3px rgba(18, 116, 96, .12);
+}
+
+.form-row {
+  display: grid;
+  grid-template-columns: 110px 1fr;
+  gap: 14px;
+}
+
+.toggle-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--muted);
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.toggle-row input {
+  display: none;
+}
+
+.toggle {
+  width: 32px;
+  height: 18px;
+  background: var(--line);
+  border-radius: 12px;
+  position: relative;
+  margin: 0;
+  flex-shrink: 0;
+  transition: background .2s;
+}
+
+.toggle:after {
+  content: '';
+  position: absolute;
+  width: 14px;
+  height: 14px;
+  top: 2px;
+  left: 2px;
+  border-radius: 50%;
+  background: white;
+  transition: .2s;
+}
+
+.toggle-row input:checked + .toggle {
+  background: var(--teal);
+}
+
+.toggle-row input:checked + .toggle:after {
+  left: 16px;
+}
+
+.primary-button {
+  width: 100%;
+  border: 0;
+  background: var(--ink);
+  color: white;
+  padding: 14px 18px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font: 600 14px 'Be Vietnam Pro', sans-serif;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background .18s;
+}
+
+.primary-button:hover {
+  background: var(--teal);
+}
+
+.icon-button {
+  border: 1px solid var(--line);
+  background: transparent;
+  width: 34px;
+  height: 34px;
+  cursor: pointer;
+  border-radius: 5px;
+  font-size: 18px;
+  color: var(--teal);
+  display: grid;
+  place-items: center;
+  transition: background .15s;
+}
+
+.icon-button:hover {
+  background: var(--mint);
+}
+
+.count-badge {
+  font: 600 12px 'JetBrains Mono', monospace;
+  background: #e6eae2;
+  color: var(--teal);
+  padding: 2px 7px;
+  border-radius: 10px;
+  vertical-align: middle;
+  margin-left: 6px;
+}
+
+.runs-search-bar {
+  margin-bottom: 14px;
+}
+
+.runs-search-bar input {
+  padding: 8px 12px;
+  font-size: 13px;
+  border-radius: 6px;
+  background: #fff;
+}
+
+.runs-search-bar input:focus {
+  border-color: var(--teal);
+  outline: none;
+}
+
+.runs-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-height: 520px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.runs-list::-webkit-scrollbar {
+  width: 6px;
+}
+
+.runs-list::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.runs-list::-webkit-scrollbar-thumb {
+  background: #d8ded3;
+  border-radius: 3px;
+}
+
+.runs-list::-webkit-scrollbar-thumb:hover {
+  background: var(--teal);
+}
+
+.pagination-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px solid var(--line);
+  font-size: 12.5px;
+  color: var(--muted);
+}
+
+.pagination-controls {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.page-btn {
+  border: 1px solid var(--line);
+  background: #fff;
+  color: var(--ink);
+  padding: 4px 10px;
+  font: 600 12px 'Be Vietnam Pro', sans-serif;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all .15s;
+}
+
+.page-btn:hover:not(:disabled) {
+  border-color: var(--teal);
+  color: var(--teal);
+  background: var(--mint);
+}
+
+.page-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.page-info {
+  font: 600 12px 'JetBrains Mono', monospace;
+  padding: 0 4px;
+}
+
+.empty-state {
+  padding: 40px 20px;
+  border: 1px dashed var(--line);
+  text-align: center;
+  color: var(--muted);
+  font-size: 13.5px;
+  line-height: 1.6;
+  border-radius: 6px;
+}
+
+.run-item {
+  padding: 16px 18px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: .18s;
+  background: #fff;
+}
+
+.run-item:hover {
+  border-color: var(--teal);
+  transform: translateX(3px);
+  box-shadow: 0 4px 12px rgba(20, 125, 104, .06);
+}
+
+.run-item.active {
+  border-color: var(--teal);
+  background: #f6faf6;
+  box-shadow: 0 4px 14px rgba(20, 125, 104, .1);
+}
+
+.run-topic {
+  font-weight: 600;
+  font-size: 14px;
+  line-height: 1.45;
+  margin-bottom: 10px;
+}
+
+.run-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  color: var(--muted);
+  font: 12px 'JetBrains Mono', monospace;
+}
+
+.status-pill {
+  font: 600 11px 'JetBrains Mono', monospace;
+  letter-spacing: .06em;
+  padding: 5px 8px;
+  background: var(--mint);
+  color: var(--teal);
+  border-radius: 3px;
+}
+
+.status-pill.failed {
+  background: #f8dfd6;
+  color: #a33f20;
+}
+
+.detail-panel {
+  margin: 24px 0 48px;
+  padding: 28px;
+}
+
+.hidden {
+  display: none !important;
+}
+
+.detail-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+}
+
+.detail-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-shrink: 0;
+}
+
+.secondary-button {
+  border: 1px solid var(--line);
+  background: #fff;
+  color: var(--ink);
+  padding: 6px 12px;
+  font: 600 12px 'Be Vietnam Pro', sans-serif;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all .18s;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.secondary-button:hover {
+  border-color: var(--teal);
+  color: var(--teal);
+  background: var(--mint);
+}
+
+.secondary-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.secondary-button.danger-button {
+  border-color: #f1b0a2;
+  color: #a33f20;
+}
+
+.secondary-button.danger-button:hover {
+  background: #fdf2ef;
+  border-color: #a33f20;
+}
+
+.progress-track {
+  height: 6px;
+  background: #e6eae2;
+  margin: 26px 0 24px;
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.progress-track div {
+  height: 100%;
+  width: 0;
+  background: var(--orange);
+  transition: width .5s cubic-bezier(.4, 0, .2, 1);
+}
+
+.detail-layout {
+  display: grid;
+  grid-template-columns: 210px 1fr;
+  gap: 28px;
+}
+
+.stage-rail {
+  border-right: 1px solid var(--line);
+  padding-right: 18px;
+}
+
+.stage-item {
+  display: flex;
+  gap: 10px;
+  padding: 8px 0;
+  color: var(--muted);
+  font-size: 13px;
+  align-items: center;
+}
+
+.stage-item.active {
+  color: var(--ink);
+  font-weight: 700;
+}
+
+.stage-index {
+  font: 600 12px 'JetBrains Mono', monospace;
+  color: var(--teal);
+}
+
+.metric-strip {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  border-bottom: 1px solid var(--line);
+  padding-bottom: 20px;
+  margin-bottom: 22px;
+}
+
+.metric-strip span {
+  display: block;
+  color: var(--muted);
+  font: 600 11px 'JetBrains Mono', monospace;
+  letter-spacing: .06em;
+  margin-bottom: 6px;
+  text-transform: uppercase;
+}
+
+.metric-strip strong {
+  font-size: 18px;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-weight: 700;
+}
+
+.artifact-box {
+  background: #f7f8f3;
+  padding: 20px;
+  border-radius: 6px;
+  border: 1px solid var(--line);
+}
+
+.artifact-list {
+  color: var(--muted);
+  font-size: 13.5px;
+  line-height: 1.85;
+}
+
+.artifact-link {
+  color: var(--teal);
+  text-decoration: none;
+  display: block;
+  font-weight: 500;
+  padding: 3px 0;
+}
+
+.artifact-link:hover {
+  text-decoration: underline;
+}
+
+.paper-viewer {
+  margin-top: 24px;
+  border: 1px solid var(--line);
+  background: #eef0ea;
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.paper-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 18px 20px;
+  background: var(--panel);
+  border-bottom: 1px solid var(--line);
+}
+
+.paper-heading h3 {
+  margin: 0;
+  font-size: 17px;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-weight: 700;
+}
+
+.paper-link {
+  color: var(--teal);
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.paper-viewer iframe {
+  display: block;
+  width: 100%;
+  height: 720px;
+  border: 0;
+  background: white;
+}
+
+/* Banner thông báo đề tài đang chạy ngầm */
+.active-run-banner {
+  background: linear-gradient(135deg, #0e2920 0%, #16362b 100%);
+  color: #fff;
+  border-radius: 8px;
+  padding: 14px 20px;
+  margin-bottom: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  box-shadow: 0 8px 24px rgba(18, 116, 96, 0.18);
+  border: 1px solid rgba(215, 239, 229, 0.25);
+  animation: slideDownBanner .25s ease-out;
+}
+
+@keyframes slideDownBanner {
+  from { opacity: 0; transform: translateY(-8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.active-run-banner.hidden {
+  display: none !important;
+}
+
+.active-run-left {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-width: 0;
+  flex: 1;
+}
+
+.active-pulse-ring {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  flex-shrink: 0;
+}
+
+.active-pulse-ring::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: #34d399;
+  opacity: 0.4;
+  animation: pulsePing 1.8s cubic-bezier(0, 0, 0.2, 1) infinite;
+}
+
+.active-pulse-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #34d399;
+  box-shadow: 0 0 10px #34d399;
+  position: relative;
+  z-index: 1;
+}
+
+@keyframes pulsePing {
+  75%, 100% {
+    transform: scale(2.2);
+    opacity: 0;
+  }
+}
+
+.active-run-content {
+  min-width: 0;
+  flex: 1;
+}
+
+.active-run-title-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 4px;
+  min-width: 0;
+}
+
+.active-badge {
+  background: rgba(52, 211, 153, 0.2);
+  color: #a7f3d0;
+  border: 1px solid rgba(52, 211, 153, 0.4);
+  font: 600 10px 'JetBrains Mono', monospace;
+  padding: 2px 7px;
+  border-radius: 4px;
+  letter-spacing: .08em;
+  white-space: nowrap;
+}
+
+.active-run-topic {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 14px;
+  font-weight: 700;
+  color: #fff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.active-run-status-row {
+  font-size: 12.5px;
+  color: #cbd5e1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.active-run-status-row strong {
+  color: #34d399;
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.dot-separator {
+  opacity: 0.5;
+}
+
+.active-run-msg {
+  color: #94a3b8;
+  font-size: 12px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.active-run-jump-btn {
+  background: #34d399;
+  color: #064e3b;
+  border: none;
+  font: 700 12.5px 'Be Vietnam Pro', sans-serif;
+  padding: 8px 16px;
+  border-radius: 6px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all .18s ease;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  flex-shrink: 0;
+}
+
+.active-run-jump-btn:hover {
+  background: #6ee7b7;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(52, 211, 153, 0.35);
+}
+
+footer {
+  display: flex;
+  justify-content: space-between;
+  color: var(--muted);
+  font: 11.5px 'JetBrains Mono', monospace;
+  padding: 24px 0 42px;
+  border-top: 1px solid var(--line);
+}
+
+@media(max-width: 800px) {
+  .shell {
+    padding: 0 18px;
+  }
+  .hero {
+    display: block;
+    padding: 44px 0 34px;
+  }
+  .hero-stamp {
+    margin-top: 28px;
+    width: max-content;
+  }
+  .workspace-grid {
+    grid-template-columns: 1fr;
+  }
+  .detail-layout {
+    grid-template-columns: 1fr;
+  }
+  .stage-rail {
+    border-right: 0;
+    border-bottom: 1px solid var(--line);
+    padding: 0 0 14px;
+    display: flex;
+    overflow: auto;
+    gap: 16px;
+  }
+  .stage-item {
+    white-space: nowrap;
+  }
+  .metric-strip {
+    gap: 14px;
+  }
+  .metric-strip strong {
+    font-size: 15px;
+  }
+  .paper-viewer iframe {
+    height: 560px;
+  }
+  footer {
+    display: block;
+    line-height: 2;
+  }
+}

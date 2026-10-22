@@ -1,0 +1,18 @@
+[
+  {
+    "Name": "doubly_robust_iptw_estimation",
+    "Title": "Doubly Robust Inverse Probability Treatment Weighting for Confounding Adjustment",
+    "Experiment": "Combine a propensity score model with an outcome regression model to achieve double robustness against misspecification when estimating Average Treatment Effect (ATE) under observational biomass exposure.",
+    "Interestingness": 9,
+    "Feasibility": 9,
+    "Novelty": 8
+  },
+  {
+    "Name": "covariate_balancing_propensity_score",
+    "Title": "Covariate Balancing Optimization to Minimize Absolute Standardized Mean Difference (ASMD)",
+    "Experiment": "Directly optimize treatment weights by bounding the dual loss of ASMD across all observed demographic and clinical covariates, comparing covariate overlap against standard logistic propensity weighting.",
+    "Interestingness": 8,
+    "Feasibility": 8,
+    "Novelty": 8
+  }
+]

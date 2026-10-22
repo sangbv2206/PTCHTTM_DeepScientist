@@ -1,0 +1,11 @@
+[
+  {
+    "Name": "doubly_robust_iptw_estimation",
+    "Title": "Doubly Robust Inverse Probability Treatment Weighting for Confounding Adjustment",
+    "Experiment": "Combine a propensity score model with an outcome regression model to achieve double robustness against misspecification when estimating Average Treatment Effect (ATE) under observational biomass exposure.",
+    "Interestingness": 9,
+    "Feasibility": 9,
+    "Novelty": 8,
+    "novel": true
+  }
+]

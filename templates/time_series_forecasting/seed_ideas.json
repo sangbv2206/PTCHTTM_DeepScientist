@@ -1,0 +1,26 @@
+[
+  {
+    "Name": "temporal_multi_head_attention",
+    "Title": "Temporal Multi-Head Self-Attention for Capturing Long-Range Dynamic Dependencies",
+    "Experiment": "Integrate a multi-head temporal self-attention mechanism on top of the GRU/recurrent backbone. Compute attention scores across historical horizon timesteps to capture non-local periodic dependencies, evaluating gains on Test MSE and R2.",
+    "Interestingness": 8,
+    "Feasibility": 9,
+    "Novelty": 7
+  },
+  {
+    "Name": "adaptive_trend_seasonality_decomposition",
+    "Title": "Adaptive Trend-Seasonality Decomposition Networks for Multivariate Physical Forecasting",
+    "Experiment": "Incorporate a learnable moving-average decomposition block that separates high-frequency seasonal oscillations from low-frequency hydrodynamic/energy trends before passing through recurrent layers.",
+    "Interestingness": 8,
+    "Feasibility": 8,
+    "Novelty": 8
+  },
+  {
+    "Name": "residual_gated_recurrent_units",
+    "Title": "Residual Gated Recurrence with Highway Connections for Gradient Highway Stabilization",
+    "Experiment": "Add identity skip connections across recurrent state transitions to mitigate vanishing gradients in long-sequence forecasting, comparing training loss stability against the standard baseline.",
+    "Interestingness": 7,
+    "Feasibility": 9,
+    "Novelty": 6
+  }
+]

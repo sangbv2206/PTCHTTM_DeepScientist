@@ -3,18 +3,32 @@ import os
 import os.path as osp
 import pickle
 
-import matplotlib.colors as mcolors
+import matplotlib
+matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
 
+plt.rcParams.update({
+    "font.size": 13,
+    "axes.titlesize": 14,
+    "axes.labelsize": 13,
+    "legend.fontsize": 12,
+    "xtick.labelsize": 11,
+    "ytick.labelsize": 11,
+})
+
 # LOAD FINAL RESULTS:
 datasets = ["circle", "dino", "line", "moons"]
-folders = os.listdir("./")
+panel_tags = ["(a)", "(b)", "(c)", "(d)"]
+folders = sorted(os.listdir("./"))
 final_results = {}
 train_info = {}
 
 
 def smooth(x, window_len=10, window='hanning'):
+    x = np.asarray(x)
+    if len(x) < window_len + 1:
+        return x
     s = np.r_[x[window_len - 1:0:-1], x, x[-2:-window_len - 1:-1]]
     if window == 'flat':  # moving average
         w = np.ones(window_len, 'd')
@@ -26,74 +40,90 @@ def smooth(x, window_len=10, window='hanning'):
 
 for folder in folders:
     if folder.startswith("run") and osp.isdir(folder):
-        with open(osp.join(folder, "final_info.json"), "r") as f:
+        info_p = osp.join(folder, "final_info.json")
+        res_p = osp.join(folder, "all_results.pkl")
+        if not (osp.exists(info_p) and osp.exists(res_p)):
+            continue
+        with open(info_p, "r") as f:
             final_results[folder] = json.load(f)
-        all_results = pickle.load(open(osp.join(folder, "all_results.pkl"), "rb"))
-        train_info[folder] = all_results
+        with open(res_p, "rb") as f:
+            train_info[folder] = pickle.load(f)
 
-# CREATE LEGEND -- PLEASE FILL IN YOUR RUN NAMES HERE
-# Keep the names short, as these will be in the legend.
-labels = {
-    "run_0": "Baseline",
-}
+# LEGEND LABELS: đọc tên hiển thị từ run_labels.json (do pipeline ghi ra) thay vì tên thư mục nội bộ run_0/run_1
+labels = {"run_0": "Baseline DDPM", "run_1": "Proposed"}
+if osp.exists("run_labels.json"):
+    try:
+        with open("run_labels.json", "r", encoding="utf-8") as f:
+            labels.update(json.load(f))
+    except Exception:
+        pass
 
-# Use the run key as the default label if not specified
 runs = list(final_results.keys())
 for run in runs:
     if run not in labels:
-        labels[run] = run
+        labels[run] = run.replace("_", " ").title()
 
+# Bảng màu cố định, phân biệt rõ baseline / proposed
+base_colors = ["#4C72B0", "#DD8452", "#55A868", "#C44E52", "#8172B3"]
+colors = [base_colors[i % len(base_colors)] for i in range(len(runs))]
 
-# CREATE PLOTS
-
-# Create a programmatic color palette
-def generate_color_palette(n):
-    cmap = plt.get_cmap('tab20')  # You can change 'tab20' to other colormaps like 'Set1', 'Set2', 'Set3', etc.
-    return [mcolors.rgb2hex(cmap(i)) for i in np.linspace(0, 1, n)]
-
-
-# Get the list of runs and generate the color palette
-runs = list(final_results.keys())
-colors = generate_color_palette(len(runs))
-
-# Plot 1: Line plot of training loss for each dataset across the runs with labels
-fig, axs = plt.subplots(2, 2, figsize=(14, 8), sharex=True)
-
+# Plot 1: Training loss per dataset (2x2 panels)
+fig, axs = plt.subplots(2, 2, figsize=(12, 8), sharex=True)
 for j, dataset in enumerate(datasets):
-    row = j // 2
-    col = j % 2
+    ax = axs[j // 2, j % 2]
     for i, run in enumerate(runs):
-        mean = train_info[run][dataset]["train_losses"]
-        mean = smooth(mean, window_len=25)
-        axs[row, col].plot(mean, label=labels[run], color=colors[i])
-        axs[row, col].set_title(dataset)
-        axs[row, col].legend()
-        axs[row, col].set_xlabel("Training Step")
-        axs[row, col].set_ylabel("Loss")
-
+        if dataset not in train_info[run]:
+            continue
+        curve = smooth(train_info[run][dataset]["train_losses"], window_len=25)
+        ax.plot(curve, label=labels[run], color=colors[i], lw=1.6)
+    ax.set_title(f"{panel_tags[j]} {dataset.title()}")
+    ax.set_xlabel("Training step")
+    ax.set_ylabel("Training objective")
+    ax.grid(True, linestyle=":", alpha=0.6)
+    ax.legend()
 plt.tight_layout()
-plt.savefig("train_loss.png")
-plt.show()
+plt.savefig("train_loss.png", dpi=300)
+plt.close()
 
-# Plot 2: Visualize generated samples
-# If there is more than 1 run, these are added as extra rows.
+# Plot 2: Generated samples — one row per method, one column per dataset
 num_runs = len(runs)
-fig, axs = plt.subplots(num_runs, 4, figsize=(14, 3 * num_runs))
+if num_runs > 0:
+    fig, axs = plt.subplots(num_runs, 4, figsize=(14, 3.6 * num_runs), squeeze=False)
+    for i, run in enumerate(runs):
+        for j, dataset in enumerate(datasets):
+            ax = axs[i, j]
+            if dataset in train_info[run]:
+                images = train_info[run][dataset]["images"]
+                ax.scatter(images[:, 0], images[:, 1], s=1, alpha=0.25, color=colors[i])
+            tag = panel_tags[j] if i == 0 else ""
+            ax.set_title(f"{tag} {dataset.title()}".strip())
+            ax.set_aspect("equal", adjustable="datalim")
+            ax.set_xticks([])
+            ax.set_yticks([])
+        axs[i, 0].set_ylabel(labels[run], fontsize=14, fontweight="bold")
+    plt.tight_layout()
+    plt.savefig("generated_images.png", dpi=300)
+    plt.close()
 
-for i, run in enumerate(runs):
-    for j, dataset in enumerate(datasets):
-        images = train_info[run][dataset]["images"]
-        if num_runs == 1:
-            axs[j].scatter(images[:, 0], images[:, 1], alpha=0.2, color=colors[i])
-            axs[j].set_title(dataset)
-        else:
-            axs[i, j].scatter(images[:, 0], images[:, 1], alpha=0.2, color=colors[i])
-            axs[i, j].set_title(dataset)
-    if num_runs == 1:
-        axs[0].set_ylabel(labels[run])
-    else:
-        axs[i, 0].set_ylabel(labels[run])
-
-plt.tight_layout()
-plt.savefig("generated_images.png")
-plt.show()
+# Plot 3: KL divergence comparison across datasets
+if num_runs >= 1:
+    fig, ax = plt.subplots(figsize=(10, 5.5))
+    x = np.arange(len(datasets))
+    width = 0.8 / max(num_runs, 1)
+    for i, run in enumerate(runs):
+        kl_vals = [final_results.get(run, {}).get(d, {}).get("means", {}).get("kl_divergence", 0.0) for d in datasets]
+        offset = (i - (num_runs - 1) / 2) * width
+        rects = ax.bar(x + offset, kl_vals, width, label=labels[run], color=colors[i],
+                       alpha=0.9, edgecolor="black", linewidth=0.8)
+        for rect in rects:
+            h = rect.get_height()
+            ax.annotate(f"{h:.3f}", xy=(rect.get_x() + rect.get_width() / 2, h), xytext=(0, 3),
+                        textcoords="offset points", ha="center", va="bottom", fontsize=11)
+    ax.set_ylabel("Estimated KL divergence (lower is better)")
+    ax.set_xticks(x)
+    ax.set_xticklabels([d.title() for d in datasets])
+    ax.legend()
+    ax.grid(axis="y", linestyle="--", alpha=0.5)
+    plt.tight_layout()
+    plt.savefig("kl_divergence_comparison.png", dpi=300)
+    plt.close()
