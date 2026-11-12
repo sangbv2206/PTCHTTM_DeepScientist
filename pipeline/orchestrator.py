@@ -15,13 +15,16 @@ from core.knowledge_store import KnowledgeStore
 from core.external_retriever import check_internet_connection
 from agents.research_agents import (
     ProblemIdentifier, ProblemValidator,
-    MethodDeveloper, MethodValidator,
+    MethodDeveloper, MethodValidator, MethodSelector,
     ExperimentDesigner, ExperimentValidator,
 )
-from agents.experiment_agents import CoderAgent
+from agents.experiment_agents import CoderAgent, ZeroShotExperimentRunner
 from templates.template_manager import TemplateManager
 from agents.latex_writer import LaTeXWriter
 from agents.peer_reviewer import PeerReviewer
+from core.paper_reader import build_seed_digest, render_seed_digest
+from core.experiment_cache import ExperimentCache
+from core.data_agent import DataAgent
 import time
 from core.contracts import EnvironmentInfo, FigureManifestItem, validate_results_data
 from core.claim_ledger import ClaimLedger
@@ -83,16 +86,22 @@ class DeepScientistPipeline:
         else:
             print("[KnowledgeStore] Đã xác thực kết nối Internet. Kích hoạt cơ chế cào trực tuyến (OpenAlex & arXiv API). Tối ưu hóa bộ nhớ RAM.")
 
-        # Đầy đủ 6 tác nhân nguyên bản của ResearchAgent
+        # Đầy đủ các tác nhân nghiên cứu & thực nghiệm
         self.problem_identifier = ProblemIdentifier(self.llm)
         self.problem_validator = ProblemValidator(self.llm)
         self.method_developer = MethodDeveloper(self.llm)
         self.method_validator = MethodValidator(self.llm)
+        self.method_selector = MethodSelector(self.llm)
         self.experiment_designer = ExperimentDesigner(self.llm)
         self.experiment_validator = ExperimentValidator(self.llm)
+        self.data_agent = DataAgent(self.llm)
 
         # CoderAgent của Sakana AI để nâng cấp code template
         self.coder_agent = CoderAgent(self.llm)
+
+        # Trình sinh thực nghiệm tự do (Zero-Shot) khi không có template
+        self.zero_shot_runner = ZeroShotExperimentRunner(self.llm, max_attempts=4, timeout_sec=600)
+        self.experiment_cache = ExperimentCache()
 
         # Công cụ xuất bản & phản biện của Sakana AI
         self.latex_writer = LaTeXWriter(self.llm, self.knowledge_store)
@@ -167,11 +176,32 @@ Rules:
         template_name: Optional[str] = None,
         max_iterations: int = 2,
         run_id: Optional[str] = None,
+        seed_pdf: Optional[str] = None,
+        research_mode: str = "empirical",
     ) -> Dict[str, Any]:
         timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
         run_name = f"run_{run_id}" if run_id else f"run_{timestamp}"
         run_dir = os.path.join(self.output_base_dir, run_name)
         os.makedirs(run_dir, exist_ok=True)
+
+        # 0. Trích xuất bản tóm lược kỹ thuật nếu người dùng cung cấp bài báo PDF seed
+        seed_digest = None
+        if seed_pdf and os.path.exists(seed_pdf):
+            print(f"[PIPELINE] Phát hiện bài báo PDF hạt giống: '{seed_pdf}'")
+            print("[PIPELINE] Đang trích xuất tóm lược kỹ thuật từ PDF (phương pháp, dataset, baseline, metric)...")
+            sys.stdout.flush()
+            seed_digest = build_seed_digest(seed_pdf, self.llm)
+            with open(os.path.join(run_dir, "seed_digest.json"), "w", encoding="utf-8") as sf:
+                json.dump(seed_digest, sf, indent=2, ensure_ascii=False)
+            if research_mode == "reproduce" or not topic or not topic.strip():
+                topic = seed_digest.get("title") or os.path.basename(seed_pdf)
+            print(f"[PIPELINE] Tiêu đề bài báo hạt giống: '{seed_digest.get('title')}'")
+            print(f"[PIPELINE] Họ bài toán: '{seed_digest.get('problem_family')}'")
+            mode_label = (
+                "Tái hiện bám sát bài báo" if research_mode == "reproduce"
+                else ("Nghiên cứu thực nghiệm so sánh (Empirical)" if research_mode == "empirical" else "Đề xuất cải tiến mới")
+            )
+            print(f"[PIPELINE] Chế độ nghiên cứu: {research_mode.upper()} ({mode_label})")
 
         original_topic = (topic or "").strip()
         topic_en = self._normalize_topic_to_english(original_topic)
@@ -206,32 +236,24 @@ Rules:
         elif data_cov["status"] == "MODERATE":
             print(f" [Lưu ý tài liệu]: {data_cov['warning']}")
 
-        print(f"[Pre-Flight] Đánh giá Template thực nghiệm: '{tpl_suit.get('selected_template')}' (Độ tin cậy: {tpl_suit.get('confidence')}/10)")
-        if not tpl_suit.get("is_supported") or tpl_suit.get("confidence", 0) < 6:
-            print("\n" + "!" * 70)
-            print(f" [CẢNH BÁO TEMPLATE]: Chưa có template chuyên biệt cho đề tài '{topic}' trong 14 template có sẵn!")
-            print(f" Phân tích: {tpl_suit.get('reasoning')}")
-            print(" [CÁC HƯỚNG GIẢI QUYẾT ĐỀ XUẤT]:")
-            print("   -> Hướng 1: Kích hoạt chế độ Autonomous Zero-Shot Coding (CoderAgent tự thiết kế và sinh mã run_experiment.py mới).")
-            print("   -> Hướng 2: Bổ sung thư mục template tùy biến vào templates/ chứa experiment.py.")
-            print(f"   -> Gợi ý: {tpl_suit.get('suggestions')}")
-            print("!" * 70 + "\n")
+        is_supported = bool(tpl_suit.get("is_supported") and tpl_suit.get("confidence", 0) >= 6)
+        if template_name:
+            execution_mode = "template"
+            print(f"[Pre-Flight] Người dùng chỉ định template: '{template_name}'")
+        elif is_supported:
+            execution_mode = "template"
+            template_name = tpl_suit.get("selected_template")
+            print(f"[Pre-Flight] Khớp template có sẵn: '{template_name}' (Độ tin cậy: {tpl_suit.get('confidence')}/10)")
         else:
-            print(f" -> Đánh giá: {tpl_suit.get('reasoning')}")
-
-        if not template_name:
-            template_name = tpl_suit.get("selected_template") or self.template_manager.select_best_template_for_topic(topic)
-
-        # Kiểm tra tính nhất quán ngữ nghĩa giữa Đề tài và Bản chất Template
-        t_low = (topic or "").lower()
-        if "continuous" in t_low and template_name == "reinforcement_learning":
+            execution_mode = "zero_shot"
+            template_name = "zero_shot"
             print("\n" + "=" * 70)
-            print(" [KIỂM DUYỆT NHẤT QUÁN ĐỀ TÀI & TEMPLATE (SEMANTIC FIDELITY GUARD)]:")
+            print(" [KÍCH HOẠT CHẾ ĐỘ AUTONOMOUS ZERO-SHOT SYNTHESIS (Template-Free)]:")
             print(f" Đề tài: '{topic}'")
-            print(" -> PHÁT HIỆN: Đề tài yêu cầu điều khiển liên tục ('continuous'),")
-            print("    nhưng template 'reinforcement_learning' sử dụng CartPole rời rạc (Discrete Action: Left/Right).")
-            print(" -> GIẢI PHÁP HỆ THỐNG: Kích hoạt chỉ dẫn 'Action-Space Discretization Mapping'")
-            print("    để các Agent bám sát bản chất CartPole, tuyệt đối không bịa đặt môi trường ảo!")
+            print(f" Phân tích: {tpl_suit.get('reasoning')}")
+            print(" -> KHÔNG ép vào template sai (nanoGPT / time_series).")
+            print(" -> CoderAgent sẽ tự động thiết kế dữ liệu mô phỏng, thuật toán baseline và phương pháp đề xuất")
+            print("    trong một file run_experiment.py độc lập, tự chạy và tự sửa lỗi!")
             print("=" * 70 + "\n")
 
         # Lưu báo cáo kiểm định trước chuyến bay
@@ -240,7 +262,10 @@ Rules:
             "original_topic": original_topic,
             "data_coverage": data_cov,
             "template_suitability": tpl_suit,
-            "selected_template": template_name
+            "selected_template": template_name,
+            "execution_mode": execution_mode,
+            "research_mode": research_mode,
+            "has_seed_pdf": bool(seed_pdf),
         }
         with open(os.path.join(run_dir, "preflight_assessment.json"), "w", encoding="utf-8") as pf:
             json.dump(preflight_info, pf, indent=2, ensure_ascii=False)
@@ -312,6 +337,16 @@ Rules:
                 related_papers = open_world_data["references"]
                 discovered_entities = open_world_data["entities"]
 
+        # Nếu có seed_digest thì ưu tiên dùng làm target_paper
+        if seed_digest:
+            target_paper = {
+                "title": seed_digest.get("title"),
+                "abstract": seed_digest.get("abstract", "")[:2000],
+                "year": 2025,
+                "corpusid": "seed_pdf",
+            }
+            print(f"[PIPELINE] Sử dụng bài báo PDF làm bài báo hạt giống chính: '{target_paper['title']}'")
+
         print(f"[PIPELINE] Bài báo hạt giống định hướng (Seed Paper): '{target_paper.get('title')}'")
         total_p = len(self.knowledge_store.papers_by_id)
         total_e = len(self.knowledge_store.entity_counter)
@@ -321,7 +356,7 @@ Rules:
             print(f"[PIPELINE] Đã tuyển chọn Top {len(related_papers)} tài liệu tham khảo sát nhất từ kho ngoại tuyến ({total_p:,} bài).")
         print(f"[PIPELINE] Đã khai phá Top {len(discovered_entities)} khái niệm và thực thể học thuật tiêu biểu:")
         print(f"           -> {', '.join(discovered_entities[:10])}...")
-        print(f"[PIPELINE] Khởi động thực nghiệm trên Template: '{template_name}'")
+        print(f"[PIPELINE] Chế độ thực thi: {execution_mode.upper()} ({template_name})")
         sys.stdout.flush()
 
         context = {
@@ -332,10 +367,19 @@ Rules:
             "references": related_papers,
             "entities": discovered_entities,
             "template_name": template_name,
+            "execution_mode": execution_mode,
+            "research_mode": research_mode,
+            "seed_digest": seed_digest,
             "preflight_info": preflight_info,
             "evidence_coverage_pct": data_cov.get("coverage_percent", 0.0),
             "evidence_status": data_cov.get("status", "INSUFFICIENT"),
         }
+
+        if seed_digest and research_mode == "reproduce":
+            if seed_digest.get("metrics"):
+                context["metrics"] = seed_digest["metrics"]
+            if seed_digest.get("baselines"):
+                context["baselines"] = seed_digest["baselines"]
 
         # -------------------------------------------------------------
         # BƯỚC 2: Tầng 1 ResearchAgent - Problem Formulation (Debate)
@@ -382,34 +426,43 @@ Rules:
             feedback_p = p_val.get("feedbacks", "")
 
         # -------------------------------------------------------------
-        # BƯỚC 3: Tầng 2 ResearchAgent - Method Development (Debate)
+        # BƯỚC 3: Tầng 2 ResearchAgent - Method Selection (Empirical) hoặc Method Development
         # -------------------------------------------------------------
-        self._emit_event(run_id or run_name, 3, "running", "Developing and validating the method", 0.42, run_dir=run_dir)
-        print("\n>>> GIAI ĐOẠN 3: TẦNG 2 - THIẾT KẾ THUẬT TOÁN & PHẢN BIỆN TOÁN HỌC (Method Development)")
-        feedback_m = ""
+        self._emit_event(run_id or run_name, 3, "running", "Selecting or developing methods", 0.42, run_dir=run_dir)
         method_result = {}
-        for it in range(max_iterations):
-            print(f"[MethodDeveloper] Vòng {it + 1}/{max_iterations}: Đang xây dựng thuật toán & công thức toán học...")
+        if research_mode == "empirical":
+            print("\n>>> GIAI ĐOẠN 3: TẦNG 2 - TUYỂN CHỌN CÁC PHƯƠNG PHÁP ĐỐI SÁNH TỪ TÀI LIỆU (Method Selection)")
+            print("[MethodSelector] Đang chọn 3-4 phương pháp/hướng tiếp cận đã công bố để đánh giá công bằng (không bịa thuật toán mới)...")
             sys.stdout.flush()
-            m_out = self.method_developer.run(context, feedback=feedback_m)
-            sys.stdout.flush()
+            m_out = self.method_selector.run(context)
             context.update(m_out)
-
-            print(f"[MethodValidator] Vòng {it + 1}/{max_iterations}: Đang thẩm định 5 tiêu chí (Rõ ràng, Chặt chẽ, Tính mới, Khả thi, Hiệu quả)...")
-            sys.stdout.flush()
-            m_val = self.method_validator.run(context)
-            sys.stdout.flush()
-            m_scores = m_val.get("scores", {})
-            m_avg = safe_float(m_val.get("average_score"), 4.0)
-            s_score = safe_float(m_scores.get("soundness"), 4.0)
-            n_score = safe_float(m_scores.get("novelty"), 4.0)
-            print(f" -> Điểm phương pháp: {m_avg:.2f}/5.0 (Soundness: {s_score:.1f}, Novelty: {n_score:.1f})")
-
             method_result = context
-            if m_avg >= 4.2:
-                print(" -> Phương pháp toán học đã đạt chuẩn khoa học xuất sắc!")
-                break
-            feedback_m = m_val.get("feedbacks", "")
+            print(f" -> Các phương pháp được chọn đối sánh: {context.get('baselines', [])}")
+        else:
+            print("\n>>> GIAI ĐOẠN 3: TẦNG 2 - THIẾT KẾ THUẬT TOÁN & PHẢN BIỆN TOÁN HỌC (Method Development)")
+            feedback_m = ""
+            for it in range(max_iterations):
+                print(f"[MethodDeveloper] Vòng {it + 1}/{max_iterations}: Đang xây dựng thuật toán & công thức toán học...")
+                sys.stdout.flush()
+                m_out = self.method_developer.run(context, feedback=feedback_m)
+                sys.stdout.flush()
+                context.update(m_out)
+
+                print(f"[MethodValidator] Vòng {it + 1}/{max_iterations}: Đang thẩm định 5 tiêu chí (Rõ ràng, Chặt chẽ, Tính mới, Khả thi, Hiệu quả)...")
+                sys.stdout.flush()
+                m_val = self.method_validator.run(context)
+                sys.stdout.flush()
+                m_scores = m_val.get("scores", {})
+                m_avg = safe_float(m_val.get("average_score"), 4.0)
+                s_score = safe_float(m_scores.get("soundness"), 4.0)
+                n_score = safe_float(m_scores.get("novelty"), 4.0)
+                print(f" -> Điểm phương pháp: {m_avg:.2f}/5.0 (Soundness: {s_score:.1f}, Novelty: {n_score:.1f})")
+
+                method_result = context
+                if m_avg >= 4.2:
+                    print(" -> Phương pháp toán học đã đạt chuẩn khoa học xuất sắc!")
+                    break
+                feedback_m = m_val.get("feedbacks", "")
 
         # -------------------------------------------------------------
         # BƯỚC 4: Tầng 3 ResearchAgent - Experiment Design (Debate)
@@ -440,111 +493,141 @@ Rules:
             feedback_e = e_val.get("feedbacks", "")
 
         # -------------------------------------------------------------
-        # BƯỚC 5: Sakana AI Execution - Huấn Luyện PyTorch Thật
+        # BƯỚC 5: Thực thi thực nghiệm (Zero-Shot hoặc Template)
         # -------------------------------------------------------------
         self._emit_event(run_id or run_name, 5, "running", "Running baseline and proposed experiments", 0.66, run_dir=run_dir)
-        print(f"\n>>> GIAI ĐOẠN 5: HUẤN LUYỆN PYTORCH THẬT SỰ TRÊN TEMPLATE '{template_name}'")
         exp_work_dir = os.path.join(run_dir, "experiment")
-        self.template_manager.copy_template_to_dir(template_name, exp_work_dir)
+        os.makedirs(exp_work_dir, exist_ok=True)
+        train_start_time = time.time()
+        baseline_stderr_log = os.path.join(exp_work_dir, "baseline_stderr.log")
+        upgraded_stderr_log = os.path.join(exp_work_dir, "upgraded_stderr.log")
 
-        # Trích xuất và inject domain_context.json tự động bằng AI từ template thực tế
-        domain_ctx = extract_domain_context(topic, template_name, llm=self.llm)
-        with open(os.path.join(exp_work_dir, "domain_context.json"), "w", encoding="utf-8") as f_ctx:
-            json.dump(domain_ctx, f_ctx, indent=2, ensure_ascii=False)
-        print(f"[Evidence Tracker] AI tự động phân giải ngữ cảnh miền: '{domain_ctx['domain']}' -> {domain_ctx['series_name']} ({domain_ctx['unit_label']})")
-        print(f"[Evidence Tracker] Dataset thực tế được AI xác định: '{domain_ctx.get('dataset_info')}'")
-
-        # 5.1. Chạy Baseline Training (Run 0)
-        TRAIN_TIMEOUT = 1800
-        print(f"[PyTorch Engine] Đang chạy Baseline Run 0 (experiment.py)... [timeout={TRAIN_TIMEOUT}s]")
-        train_cmd = [sys.executable, "-X", "utf8", "experiment.py", "--out_dir=run_0"]
         import copy
         train_env = copy.copy(os.environ.copy())
         train_env["PYTHONIOENCODING"] = "utf-8"
         train_env["PYTHONUTF8"] = "1"
-        train_env["DEEPSCIENTIST_MAX_STEPS"] = "1000"  # Quick-run 1000 steps
-        
-        train_start_time = time.time()
-        baseline_stderr_log = os.path.join(exp_work_dir, "baseline_stderr.log")
-        
-        try:
-            train_res = subprocess.run(
-                train_cmd, cwd=exp_work_dir, capture_output=True, text=True,
-                timeout=TRAIN_TIMEOUT, env=train_env, encoding="utf-8", errors="replace"
+
+        data_manifest: Dict[str, Any] = {}
+        if execution_mode == "zero_shot":
+            print("\n>>> GIAI ĐOẠN 5: THU THẬP DỮ LIỆU THỰC & CHẠY THỰC NGHIỆM ĐỘC LẬP (DATA AGENT + ZERO-SHOT)")
+            data_manifest = self.data_agent.acquire(
+                topic=topic,
+                exp_work_dir=exp_work_dir,
+                problem_info=context,
+                seed_digest=seed_digest,
+                online=is_online,
             )
-            with open(baseline_stderr_log, "w", encoding="utf-8") as f_err:
-                f_err.write(train_res.stderr or "")
-            if train_res.returncode == 0:
-                print("[PyTorch Engine] Baseline Run 0 hoàn tất!")
+            prob_fam = (seed_digest or {}).get("problem_family", "")
+            cached_ref = self.experiment_cache.find_best_match(topic, prob_fam)
+            ref_code = ""
+            if cached_ref:
+                print(f"[ZeroShot] Tìm thấy kịch bản tham khảo tương đồng trong bộ nhớ: '{cached_ref.get('topic')}' (score={cached_ref.get('_match_score')})")
+                ref_code = self.experiment_cache.load_code(cached_ref)
+
+            seed_block = render_seed_digest(seed_digest, include_results=True) if seed_digest else ""
+            zero_ok, zero_out = self.zero_shot_runner.run(
+                work_dir=exp_work_dir,
+                context=context,
+                seed_block=seed_block,
+                reference_code=ref_code,
+                env=train_env,
+                data_manifest=data_manifest,
+            )
+            if zero_ok:
+                saved_path = self.experiment_cache.save(
+                    work_dir=exp_work_dir,
+                    topic=topic,
+                    problem_family=prob_fam,
+                    method_name=context.get("method_name", "Proposed"),
+                    metrics=context.get("metrics", []),
+                )
+                print(f"[ZeroShot] Đã lưu kịch bản vào bộ nhớ tự mở rộng: {saved_path}")
             else:
-                print(f"[PyTorch Engine] Cảnh báo Run 0 (Exit {train_res.returncode}): Log ghi tại {baseline_stderr_log}")
-        except subprocess.TimeoutExpired:
-            print(f"[PyTorch Engine] Run 0 vượt quá {TRAIN_TIMEOUT}s timeout — bỏ qua, tiếp tục pipeline.")
-            with open(baseline_stderr_log, "w", encoding="utf-8") as f_err:
-                f_err.write("TimeoutExpired")
+                with open(upgraded_stderr_log, "w", encoding="utf-8") as f_err:
+                    f_err.write(zero_out)
+                print("[ZeroShot] Thực nghiệm không vượt qua cổng kiểm tra chất lượng. Dừng pipeline (Fail-Closed).")
+                return {
+                    "status": "FAILED",
+                    "run_dir": run_dir,
+                    "reason": "ZERO_SHOT_EXPERIMENT_FAILED",
+                    "details": zero_out[:1000],
+                }
+        else:
+            print(f"\n>>> GIAI ĐOẠN 5: HUẤN LUYỆN PYTORCH THẬT SỰ TRÊN TEMPLATE '{template_name}'")
+            self.template_manager.copy_template_to_dir(template_name, exp_work_dir)
 
-        # 5.2. CoderAgent nâng cấp mã nguồn theo phương pháp mới của ResearchAgent
-        print(f"[CoderAgent] Đang nâng cấp mã nguồn PyTorch theo phương pháp '{context.get('method_name')}'...")
-        try:
-            with open(os.path.join(exp_work_dir, "experiment.py"), "r", encoding="utf-8") as f:
-                base_code = f.read()
+            domain_ctx = extract_domain_context(topic, template_name, llm=self.llm)
+            with open(os.path.join(exp_work_dir, "domain_context.json"), "w", encoding="utf-8") as f_ctx:
+                json.dump(domain_ctx, f_ctx, indent=2, ensure_ascii=False)
+            print(f"[Evidence Tracker] AI tự động phân giải ngữ cảnh miền: '{domain_ctx['domain']}' -> {domain_ctx['series_name']} ({domain_ctx['unit_label']})")
+            print(f"[Evidence Tracker] Dataset thực tế được AI xác định: '{domain_ctx.get('dataset_info')}'")
 
-            upgraded_code = self.coder_agent.modify_template_code(
-                base_code=base_code,
-                method_info=context,
-                experiment_design=context
-            )
-            upgraded_script_path = os.path.join(exp_work_dir, "experiment_upgraded.py")
-            with open(upgraded_script_path, "w", encoding="utf-8") as f:
-                f.write(upgraded_code)
+            TRAIN_TIMEOUT = 600
+            train_cmd = [sys.executable, "-X", "utf8", "experiment.py", "--out_dir=run_0"]
+            train_env["DEEPSCIENTIST_MAX_STEPS"] = "1000"
 
-            # 5.3. Chạy Proposed Innovation Training (Run 1) với cơ chế Tự sửa lỗi (Self-Healing Loop)
-            print(f"[PyTorch Engine] Đang huấn luyện mô hình cải tiến theo phát minh mới (Run 1)... [timeout={TRAIN_TIMEOUT}s]")
-            upgraded_stderr_log = os.path.join(exp_work_dir, "upgraded_stderr.log")
-            
-            MAX_CODE_RETRIES = 2
-            run1_success = False
+            try:
+                train_res = subprocess.run(
+                    train_cmd, cwd=exp_work_dir, capture_output=True, text=True,
+                    timeout=TRAIN_TIMEOUT, env=train_env, encoding="utf-8", errors="replace"
+                )
+                with open(baseline_stderr_log, "w", encoding="utf-8") as f_err:
+                    f_err.write(train_res.stderr or "")
+                if train_res.returncode == 0:
+                    print("[PyTorch Engine] Baseline Run 0 hoàn tất!")
+                else:
+                    print(f"[PyTorch Engine] Cảnh báo Run 0 (Exit {train_res.returncode}): Log ghi tại {baseline_stderr_log}")
+            except subprocess.TimeoutExpired:
+                print(f"[PyTorch Engine] Run 0 vượt quá {TRAIN_TIMEOUT}s timeout — bỏ qua, tiếp tục pipeline.")
+                with open(baseline_stderr_log, "w", encoding="utf-8") as f_err:
+                    f_err.write("TimeoutExpired")
 
-            for attempt in range(MAX_CODE_RETRIES + 1):
-                try:
-                    upg_res = subprocess.run(
-                        [sys.executable, "-X", "utf8", "experiment_upgraded.py", "--out_dir=run_1"],
-                        cwd=exp_work_dir,
-                        capture_output=True,
-                        text=True,
-                        timeout=TRAIN_TIMEOUT,
-                        env=train_env,
-                        encoding="utf-8",
-                        errors="replace"
-                    )
-                    with open(upgraded_stderr_log, "w", encoding="utf-8") as f_err:
-                        f_err.write(upg_res.stderr or "")
+            print(f"[CoderAgent] Đang nâng cấp mã nguồn PyTorch theo phương pháp '{context.get('method_name')}'...")
+            try:
+                with open(os.path.join(exp_work_dir, "experiment.py"), "r", encoding="utf-8") as f:
+                    base_code = f.read()
 
-                    if upg_res.returncode == 0:
-                        print("[PyTorch Engine] Huấn luyện mô hình cải tiến (Run 1) THÀNH CÔNG RỰC RỠ!")
-                        run1_success = True
+                upgraded_code = self.coder_agent.modify_template_code(
+                    base_code=base_code,
+                    method_info=context,
+                    experiment_design=context
+                )
+                upgraded_script_path = os.path.join(exp_work_dir, "experiment_upgraded.py")
+                with open(upgraded_script_path, "w", encoding="utf-8") as f:
+                    f.write(upgraded_code)
+
+                MAX_CODE_RETRIES = 2
+                for attempt in range(MAX_CODE_RETRIES + 1):
+                    try:
+                        upg_res = subprocess.run(
+                            [sys.executable, "-X", "utf8", "experiment_upgraded.py", "--out_dir=run_1"],
+                            cwd=exp_work_dir, capture_output=True, text=True, timeout=TRAIN_TIMEOUT,
+                            env=train_env, encoding="utf-8", errors="replace"
+                        )
+                        with open(upgraded_stderr_log, "w", encoding="utf-8") as f_err:
+                            f_err.write(upg_res.stderr or "")
+                        if upg_res.returncode == 0:
+                            print("[PyTorch Engine] Huấn luyện mô hình cải tiến (Run 1) THÀNH CÔNG RỰC RỠ!")
+                            break
+                        else:
+                            err_snippet = (upg_res.stderr or "").strip()
+                            last_err = err_snippet.splitlines()[-1] if err_snippet else "Unknown error"
+                            print(f"[PyTorch Engine] Cảnh báo Run 1 (Lần {attempt+1}/{MAX_CODE_RETRIES+1} - Exit {upg_res.returncode}): {last_err}")
+                            if attempt < MAX_CODE_RETRIES:
+                                print("[CoderAgent] Kích hoạt VÒNG LẶP TỰ SỬA LỖI (Self-Healing)...")
+                                upgraded_code = self.coder_agent.modify_template_code(
+                                    base_code=upgraded_code, method_info=context,
+                                    experiment_design=context, error_context=err_snippet
+                                )
+                                with open(upgraded_script_path, "w", encoding="utf-8") as f:
+                                    f.write(upgraded_code)
+                    except subprocess.TimeoutExpired:
+                        print(f"[PyTorch Engine] Run 1 vượt quá {TRAIN_TIMEOUT}s timeout.")
+                        with open(upgraded_stderr_log, "w", encoding="utf-8") as f_err:
+                            f_err.write("TimeoutExpired")
                         break
-                    else:
-                        err_snippet = (upg_res.stderr or "").strip()
-                        last_err = err_snippet.splitlines()[-1] if err_snippet else "Unknown error"
-                        print(f"[PyTorch Engine] Cảnh báo Run 1 (Lần {attempt+1}/{MAX_CODE_RETRIES+1} - Exit {upg_res.returncode}): {last_err}")
-                        if attempt < MAX_CODE_RETRIES:
-                            print(f"[CoderAgent] Kích hoạt VÒNG LẶP TỰ SỬA LỖI (Self-Healing)... Đang yêu cầu CoderAgent phân tích lỗi và sửa lại mã nguồn...")
-                            upgraded_code = self.coder_agent.modify_template_code(
-                                base_code=upgraded_code,
-                                method_info=context,
-                                experiment_design=context,
-                                error_context=err_snippet
-                            )
-                            with open(upgraded_script_path, "w", encoding="utf-8") as f:
-                                f.write(upgraded_code)
-                except subprocess.TimeoutExpired:
-                    print(f"[PyTorch Engine] Run 1 vượt quá {TRAIN_TIMEOUT}s timeout.")
-                    with open(upgraded_stderr_log, "w", encoding="utf-8") as f_err:
-                        f_err.write("TimeoutExpired")
-                    break
-        except Exception as e:
-            print(f"[CoderAgent] Lưu ý khi nâng cấp code: {e}")
+            except Exception as e:
+                print(f"[CoderAgent] Lưu ý khi nâng cấp code: {e}")
 
         total_wall_time = time.time() - train_start_time
 
@@ -586,8 +669,12 @@ Rules:
 
         # Thiết lập full_metrics đa mô hình để ClaimLedger và Table 1 có đầy đủ đối sánh
         full_metrics = {}
-        baseline_label = f"Standard Baseline ({template_name.replace('_', ' ').title()})"
-        proposed_label = f"Proposed ({context.get('method_abbr') or context.get('method_name', 'Ours')})"
+        baseline_label = (context.get("baselines") or [f"Standard Baseline ({template_name.replace('_', ' ').title()})"])[0] if research_mode == "empirical" else f"Standard Baseline ({template_name.replace('_', ' ').title()})"
+        proposed_label = (
+            context.get("focal_method_name") or context.get("method_name") or "Focal Method"
+            if research_mode == "empirical"
+            else f"Proposed ({context.get('method_abbr') or context.get('method_name', 'Ours')})"
+        )
 
         if baseline_metrics:
             full_metrics[baseline_label] = baseline_metrics
@@ -685,14 +772,55 @@ Rules:
         # 5.4c. Bảo đảm các hình ảnh thực nghiệm luôn tồn tại và bám sát log số liệu thật (UniversalPlotter)
         UniversalPlotter.ensure_grounded_figures(exp_work_dir, full_metrics, user_topic=topic)
 
+        # 5.4d. Nạp cấu hình thực nghiệm từ experiment_config.json (nếu có từ Zero-Shot runner)
+        exp_cfg = {}
+        cfg_file = os.path.join(exp_work_dir, "experiment_config.json")
+        if os.path.exists(cfg_file):
+            try:
+                with open(cfg_file, "r", encoding="utf-8") as cf:
+                    exp_cfg = json.load(cf)
+            except Exception:
+                pass
+
+        # Nạp all_results.json nếu có (để bảng đối sánh có đầy đủ baselines)
+        all_results_file = os.path.join(exp_work_dir, "all_results.json")
+        if os.path.exists(all_results_file):
+            try:
+                with open(all_results_file, "r", encoding="utf-8") as arf:
+                    extra_res = json.load(arf)
+                    if isinstance(extra_res, dict):
+                        for k_res, v_res in extra_res.items():
+                            if isinstance(v_res, dict) and k_res not in full_metrics:
+                                full_metrics[k_res] = v_res
+            except Exception:
+                pass
+
+        if exp_cfg.get("method_labels"):
+            m_labels = exp_cfg["method_labels"]
+            if "run_0" in m_labels and baseline_label in full_metrics:
+                val0 = full_metrics.pop(baseline_label)
+                if m_labels["run_0"] not in full_metrics:
+                    full_metrics[m_labels["run_0"]] = val0
+                baseline_label = m_labels["run_0"]
+            if "run_1" in m_labels and proposed_label in full_metrics:
+                val1 = full_metrics.pop(proposed_label)
+                if m_labels["run_1"] not in full_metrics:
+                    full_metrics[m_labels["run_1"]] = val1
+                proposed_label = m_labels["run_1"]
+        context["focal_method_name"] = proposed_label
+
+        # Cập nhật chú thích hình ảnh từ experiment_config
+        fig_captions = exp_cfg.get("figure_captions", {})
+
         # 5.5. Quét hình ảnh thực tế từ thư mục thực nghiệm (Không hardcode 8 ảnh)
         figure_manifest = []
         for f in sorted(os.listdir(exp_work_dir)):
             if f.endswith(".png"):
+                custom_cap = fig_captions.get(f) or f"Empirical outcome visualization ({f})"
                 figure_manifest.append(FigureManifestItem(
                     filename=f,
                     figure_type="empirical_result",
-                    caption=f"Empirical outcome visualization ({f})",
+                    caption=custom_cap,
                     data_source=os.path.join(exp_work_dir, f)
                 ))
         print(f"[Evidence Tracker] Tìm thấy {len(figure_manifest)} hình ảnh thực tế từ thực nghiệm: {[item.filename for item in figure_manifest]}")
@@ -712,21 +840,42 @@ Rules:
         # BƯỚC 6: Sakana AI Writeup - Soạn Thảo Toàn Văn & Compile PDF
         # -------------------------------------------------------------
         self._emit_event(run_id or run_name, 6, "running", "Writing and compiling the paper", 0.82, run_dir=run_dir)
-        # Sử dụng lại domain_ctx đã được AI phân giải ở Bước 5 hoặc gọi AI trích xuất động
-        if "domain_ctx" not in locals() or not domain_ctx:
-            domain_ctx = extract_domain_context(topic, template_name, llm=self.llm)
-        dataset_info_str = get_dataset_info_for_template(template_name, domain_ctx)
+        if exp_cfg.get("dataset_info"):
+            dataset_info_str = exp_cfg["dataset_info"]
+        else:
+            if "domain_ctx" not in locals() or not domain_ctx:
+                domain_ctx = extract_domain_context(topic, template_name, llm=self.llm)
+            dataset_info_str = get_dataset_info_for_template(template_name, domain_ctx)
+
+        if exp_cfg.get("hyperparameters"):
+            raw_hp = exp_cfg["hyperparameters"]
+            custom_hp = [tuple(x) if isinstance(x, list) and len(x) == 2 else (str(x), "Configured") for x in raw_hp]
+        else:
+            custom_hp = get_domain_hyperparameters(template_name)
+
         pdf_path, generated_title = self.latex_writer.write_paper(
             output_dir=run_dir,
-            context={"target_paper": target_paper, "related_papers": related_papers, "user_topic": topic, "topic": topic},
+            context={
+                "target_paper": target_paper,
+                "related_papers": related_papers,
+                "user_topic": topic,
+                "topic": topic,
+                "research_mode": research_mode,
+                "data_manifest": data_manifest,
+                "evaluated_methods": context.get("evaluated_methods", []),
+                "research_questions": context.get("research_questions", []),
+                "figure_captions": fig_captions,
+            },
             problem_info={"problem": context.get("problem"), "rationale": context.get("problem_rationale")},
             method_info={"method_name": context.get("method_name"), "abbreviation": context.get("method_abbr"), "intuition": context.get("method"), "mathematical_formulation": context.get("mathematical_formulation"), "theoretical_justification": context.get("method_rationale")},
             experiment_design={
-                "baselines": [baseline_label] if baseline_metrics else context.get("baselines", []),
+                "baselines": list(full_metrics.keys()) if full_metrics else ([baseline_label] if baseline_metrics else context.get("baselines", [])),
                 "metrics": context.get("metrics", []),
                 "dataset_info": dataset_info_str,
+                "data_source": exp_cfg.get("data_source") or data_manifest.get("data_source", ""),
+                "data_manifest": data_manifest,
                 "template_name": template_name,
-                "hyperparameters": get_domain_hyperparameters(template_name),
+                "hyperparameters": custom_hp,
             },
             metrics_data=full_metrics,
             experiment_dir=exp_work_dir,

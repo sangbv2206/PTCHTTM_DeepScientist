@@ -77,6 +77,7 @@ class RunRequest(BaseModel):
     topic: str = Field(min_length=3, max_length=500)
     model: Optional[str] = Field(default=None)
     template: Optional[str] = None
+    mode: str = Field(default="empirical", pattern="^(empirical|innovate|reproduce)$")
     iterations: int = Field(default=2, ge=1, le=5)
     offline: bool = False
 
@@ -118,7 +119,7 @@ def _on_event(event: Dict[str, Any]) -> None:
 
 def _run_pipeline(run_id: str, request: RunRequest) -> None:
     try:
-        api_key = os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")
+        api_key = os.getenv("GEMINI_API_KEYS") or os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")
         if not api_key:
             raise RuntimeError("GEMINI_API_KEY or GOOGLE_API_KEY is not configured on the server")
         model_to_use = request.model or DEFAULT_MODEL
@@ -135,6 +136,7 @@ def _run_pipeline(run_id: str, request: RunRequest) -> None:
             template_name=request.template,
             max_iterations=request.iterations,
             run_id=run_id,
+            research_mode=request.mode,
         )
     except Exception as error:
         with _lock:

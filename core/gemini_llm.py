@@ -28,10 +28,8 @@ from openai import OpenAI
 
 
 FALLBACK_MODELS = [
-    "gemini-2.0-flash",
-    "gemini-2.0-flash-lite",
-    "gemini-1.5-flash",
-    "gemini-1.5-pro",
+    "gemini-3.5-flash-lite",
+    "gemini-3.8-flash",
 ]
 
 
@@ -50,7 +48,7 @@ class GeminiLLM:
         model_name: str = "gemini-2.0-flash",
         temperature: float = 0.7,
         max_retries: int = 5,
-        min_request_interval: float = 4.0,
+        min_request_interval: float = 2.0,
     ):
         try:
             from dotenv import load_dotenv
@@ -61,6 +59,7 @@ class GeminiLLM:
         self.api_keys = [k.strip() for k in raw_keys.split(",") if k.strip()]
         self.current_key_idx = 0
         self.api_key = self.api_keys[0] if self.api_keys else ""
+        self.exhausted_keys = set()
         self.model_name = os.getenv("GEMINI_MODEL", model_name or "gemini-2.0-flash")
         self.temperature = temperature
         self.max_retries = max_retries
@@ -83,14 +82,16 @@ class GeminiLLM:
         )
 
     def _rotate_api_key(self) -> bool:
-        """Xoay vòng sang API Key kế tiếp nếu có nhiều hơn 1 key được cấu hình."""
-        if len(self.api_keys) > 1:
-            self.current_key_idx = (self.current_key_idx + 1) % len(self.api_keys)
-            self.api_key = self.api_keys[self.current_key_idx]
-            masked_key = self.api_key[:6] + "..." + self.api_key[-4:] if len(self.api_key) > 10 else "***"
-            print(f"\n[GeminiLLM] TỰ ĐỘNG XOAY VÒNG KEY: Chuyển sang API Key #{self.current_key_idx + 1} ({masked_key}) để giải phóng hạn ngạch...")
-            self._init_models()
-            return True
+        """Xoay vòng sang API Key chưa cạn hạn mức nếu có nhiều hơn 1 key được cấu hình."""
+        for offset in range(1, len(self.api_keys) + 1):
+            candidate_idx = (self.current_key_idx + offset) % len(self.api_keys)
+            if candidate_idx not in self.exhausted_keys:
+                self.current_key_idx = candidate_idx
+                self.api_key = self.api_keys[self.current_key_idx]
+                masked_key = self.api_key[:6] + "..." + self.api_key[-4:] if len(self.api_key) > 10 else "***"
+                print(f"\n[GeminiLLM] TỰ ĐỘNG XOAY VÒNG KEY: Chuyển sang API Key #{self.current_key_idx + 1} ({masked_key})...")
+                self._init_models()
+                return True
         return False
 
     def _switch_to_next_fallback_model(self):
@@ -157,30 +158,24 @@ class GeminiLLM:
                     time.sleep(1)
                     continue
 
-                # 2. Nếu là Rate Limit / Quota (429, resource_exhausted)
+                # 2. Nếu là Rate Limit / Quota (429, resource_exhausted) -> báo log và dừng ngay nếu hết key khả dụng
                 if any(kw in err_str for kw in ["quota", "resourceexhausted", "resource_exhausted", "429"]):
-                    # Ưu tiên xoay vòng ngay sang API Key kế tiếp nếu có cấu hình nhiều key
+                    self.exhausted_keys.add(self.current_key_idx)
+                    masked_key = self.api_key[:6] + "..." + self.api_key[-4:] if len(self.api_key) > 10 else "***"
+                    print(
+                        f"\n[GeminiLLM] CẢNH BÁO HẠN MỨC: API Key #{self.current_key_idx + 1} ({masked_key}) "
+                        f"đã chạm hạn mức (429/Quota) trên model '{self.model_name}'."
+                    )
                     if self._rotate_api_key():
                         attempt = 0
-                        rpm_429_count = 0
-                        time.sleep(1)
                         continue
 
-                    rpm_429_count += 1
-                    # Nếu mới gặp 1-2 lần -> khả năng cao là chạm trần RPM, chỉ cần backoff nghỉ 10s-20s rồi thử lại cùng model!
-                    if rpm_429_count <= 2:
-                        wait_time = 12 * rpm_429_count
-                        print(f"[GeminiLLM] Chạm ngưỡng RPM của Free Tier ({self.model_name}). Nghỉ {wait_time}s rồi tiếp tục...")
-                        time.sleep(wait_time)
-                        continue
-                    else:
-                        # Nếu đã backoff 2 lần mà vẫn 429 -> đã hết Daily Quota (RPD) của model này -> mới chuyển model!
-                        print(f"[GeminiLLM] Model '{self.model_name}' liên tục 429 (nghi hết Daily Quota RPD). Đổi sang model kế tiếp...")
-                        self._switch_to_next_fallback_model()
-                        attempt = max(0, attempt - 1)
-                        rpm_429_count = 0
-                        time.sleep(2)
-                        continue
+                    msg = (
+                        f"[GeminiLLM] DỪNG NGAY: Tất cả {len(self.api_keys)} API Key đều đã chạm hạn mức (429/Quota) "
+                        f"trên model '{self.model_name}'. Dừng tiến trình lập tức (không chờ)!"
+                    )
+                    print(msg)
+                    raise RuntimeError(msg)
 
                 # 3. Lỗi mạng hoặc server thông thường
                 wait_time = 2 * attempt

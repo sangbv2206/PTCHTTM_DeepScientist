@@ -328,6 +328,7 @@ async function submitRun(event) {
   const payload = {
     topic: $('topic').value.trim(),
     template: $('template').value || null,
+    mode: $('mode') ? $('mode').value : 'empirical',
     iterations: Number($('iterations').value),
     model: $('model').value.trim() || null,
     offline: $('offline').checked

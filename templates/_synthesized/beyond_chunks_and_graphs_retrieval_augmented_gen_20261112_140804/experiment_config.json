@@ -1,0 +1,31 @@
+{
+  "dataset_info": "hotpotqa/hotpot_qa (config=distractor, split=validation, N=12 real benchmark samples evaluated)",
+  "data_source": "real:huggingface:hotpotqa/hotpot_qa",
+  "hyperparameters": [
+    [
+      "EVAL_N",
+      12
+    ],
+    [
+      "top_k",
+      3
+    ],
+    [
+      "vectorizer",
+      "TfidfVectorizer"
+    ],
+    [
+      "random_seed",
+      42
+    ]
+  ],
+  "method_labels": {
+    "run_0": "Standard Dense Passage Retrieval-Augmented Generation (Dense-RAG)",
+    "run_1": "Triplet-Driven Thinking Retrieval-Augmented Generation (T2RAG)"
+  },
+  "figure_captions": {
+    "figure_1.png": "Line plot displaying Exact Match (EM) across 2-hop, 3-hop, and 4-hop multi-hop QA benchmarks for all four paradigms (RQ1).",
+    "figure_2.png": "Scatter plot contrasting total token expenditure against execution latency per query across Dense-RAG, GraphRAG, ToG-2.0, and T2RAG (RQ2).",
+    "figure_3.png": "Bar chart illustrating structural failure rates (cascading decomposition errors and placeholder resolution failures) under varying distractor noise ratios (RQ3)."
+  }
+}

@@ -1,0 +1,23 @@
+{
+  "topic": "Beyond Chunks and Graphs: Retrieval-Augmented Generation through Triplet-Driven Thinking",
+  "problem_family": "",
+  "method_name": "Empirical Benchmark for Beyond Chunks and Graphs: Retrieval-Augmented Generation through Triplet-Driven Thinking",
+  "metrics": [
+    "Exact Match (EM)",
+    "Answer Faithfulness Score (LLM-judged)",
+    "Retrieval Precision@K",
+    "Total Token Generation Overhead",
+    "Indexing Latency (seconds)"
+  ],
+  "keywords": [
+    "augmented",
+    "chunks",
+    "driven",
+    "generation",
+    "graphs",
+    "retrieval",
+    "thinking",
+    "triplet"
+  ],
+  "created_at": "20261112_151804"
+}

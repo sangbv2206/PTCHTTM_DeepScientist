@@ -1,0 +1,27 @@
+{
+  "dataset_info": "hotpotqa/hotpot_qa (config=distractor, split=validation, N=120 real benchmark samples, evaluated on N=4 slice)",
+  "data_source": "real:huggingface:hotpotqa/hotpot_qa",
+  "hyperparameters": [
+    [
+      "evaluation_slice_n",
+      4
+    ],
+    [
+      "top_k_passages",
+      3
+    ],
+    [
+      "random_seed",
+      42
+    ]
+  ],
+  "method_labels": {
+    "run_0": "Standard Dense Passage Retrieval-Augmented Generation",
+    "run_1": "Triplet-Driven Thinking Retrieval-Augmented Generation"
+  },
+  "figure_captions": {
+    "figure_1.png": "Compares Exact Match scores across single-hop and multi-hop reasoning categories (RQ1).",
+    "figure_2.png": "Scatter plot showing the Pareto trade-off between total token generation cost and accuracy across methods (RQ2).",
+    "figure_3.png": "Line plot displaying degradation in accuracy as irrelevant distractor paragraphs increase from 0 to 5 (RQ3)."
+  }
+}

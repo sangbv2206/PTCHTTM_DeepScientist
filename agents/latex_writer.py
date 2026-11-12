@@ -114,11 +114,25 @@ class LaTeXWriter:
             dataset_abbr = clean_ds_base
 
         user_topic = context.get("user_topic") or context.get("topic") or ""
+        research_mode = context.get("research_mode", "innovate")
+        is_empirical = (research_mode == "empirical")
+        data_manifest = context.get("data_manifest") or experiment_design.get("data_manifest") or {}
+        data_source_str = (
+            experiment_design.get("data_source")
+            or data_manifest.get("data_source")
+            or "unspecified"
+        )
+        evaluated_methods = context.get("evaluated_methods") or []
+        research_questions = context.get("research_questions") or []
+        fig_captions_map = context.get("figure_captions") or {}
 
         # 2. Xây dựng bảng kết quả thực nghiệm chuẩn mực từ ClaimLedger
-        empirical_table_latex = claim_ledger.render_results_table_latex(
-            caption=f"Empirical quantitative evaluation of \\textsc{{{method_abbr}}} against competitive baselines."
+        table_cap = (
+            f"Empirical comparative evaluation across evaluated methods on \\textsc{{{dataset_abbr}}}."
+            if is_empirical
+            else f"Empirical quantitative evaluation of \\textsc{{{method_abbr}}} against competitive baselines."
         )
+        empirical_table_latex = claim_ledger.render_results_table_latex(caption=table_cap)
 
         # 3. Xây dựng file references.bib từ bài báo thật trong KnowledgeStore
         bib_entries = []
@@ -297,7 +311,15 @@ class LaTeXWriter:
         experiment_figures = actual_figures
         if len(actual_figures) >= 2:
             teaser_file = actual_figures[0]
-            t_cap = f"\\textbf{{Primary empirical and methodological validation of \\textsc{{{method_abbr}}}.}} Empirical convergence dynamics and primary evaluation trajectory on the \\textsc{{{dataset_abbr}}} benchmark."
+            raw_teaser_cap = fig_captions_map.get(teaser_file, "").replace("&", r"\&").replace("%", r"\%").replace("_", r"\_")
+            if is_empirical:
+                t_cap = (
+                    f"\\textbf{{Primary empirical comparison on \\textsc{{{dataset_abbr}}}.}} {raw_teaser_cap}"
+                    if raw_teaser_cap
+                    else f"\\textbf{{Primary empirical comparison on \\textsc{{{dataset_abbr}}}.}} Quantitative comparison across evaluated methods."
+                )
+            else:
+                t_cap = f"\\textbf{{Primary empirical and methodological validation of \\textsc{{{method_abbr}}}.}} Empirical convergence dynamics and primary evaluation trajectory on the \\textsc{{{dataset_abbr}}} benchmark."
             teaser_latex = f"""\\begin{{figure*}}[t]
 \\centering
 \\includegraphics[width=0.92\\textwidth]{{{teaser_file}}}
@@ -321,7 +343,10 @@ class LaTeXWriter:
             claim_ledger_text=claim_ledger_text,
             user_topic=user_topic,
             dataset_info=dataset_info,
-            dataset_abbr=dataset_abbr
+            dataset_abbr=dataset_abbr,
+            research_mode=research_mode,
+            data_manifest=data_manifest,
+            evaluated_methods=evaluated_methods,
         )
 
         print("[LaTeXWriter] Đang viết Introduction...")
@@ -332,7 +357,10 @@ class LaTeXWriter:
             claim_ledger_text=claim_ledger_text,
             user_topic=user_topic,
             dataset_info=dataset_info,
-            dataset_abbr=dataset_abbr
+            dataset_abbr=dataset_abbr,
+            research_mode=research_mode,
+            research_questions=research_questions,
+            evaluated_methods=evaluated_methods,
         )
 
         print("[LaTeXWriter] Đang viết Related Work...")
@@ -342,7 +370,8 @@ class LaTeXWriter:
             method_info=method_info,
             user_topic=user_topic,
             dataset_info=dataset_info,
-            dataset_abbr=dataset_abbr
+            dataset_abbr=dataset_abbr,
+            research_mode=research_mode,
         )
 
         real_metric_names = claim_ledger.get_metric_names() if hasattr(claim_ledger, "get_metric_names") else []
@@ -356,16 +385,20 @@ class LaTeXWriter:
             dataset_info=dataset_info,
             dataset_abbr=dataset_abbr,
             real_metrics=real_metric_names,
-            real_datasets=real_dataset_names
+            real_datasets=real_dataset_names,
+            research_mode=research_mode,
+            research_questions=research_questions,
         )
 
-        print("[LaTeXWriter] Đang viết Proposed Methodology...")
+        print("[LaTeXWriter] Đang viết Methodology / Evaluated Paradigms...")
         methodology = self._write_methodology(
             method_info=method_info,
             formulation=formulation,
             user_topic=user_topic,
             dataset_info=dataset_info,
-            dataset_abbr=dataset_abbr
+            dataset_abbr=dataset_abbr,
+            research_mode=research_mode,
+            evaluated_methods=evaluated_methods,
         )
 
         print("[LaTeXWriter] Đang viết Experimental Setup & Results (Nhúng Bảng Thực Nghiệm Đích Thực)...")
@@ -379,7 +412,10 @@ class LaTeXWriter:
             dataset_info=dataset_info,
             dataset_abbr=dataset_abbr,
             real_metrics=real_metric_names,
-            real_datasets=real_dataset_names
+            real_datasets=real_dataset_names,
+            research_mode=research_mode,
+            data_manifest=data_manifest,
+            fig_captions_map=fig_captions_map,
         )
 
         print("[LaTeXWriter] Đang viết Discussion & Limitations...")
@@ -391,7 +427,9 @@ class LaTeXWriter:
             user_topic=user_topic,
             dataset_info=dataset_info,
             dataset_abbr=dataset_abbr,
-            env_info=env_info
+            env_info=env_info,
+            research_mode=research_mode,
+            data_manifest=data_manifest,
         )
 
         print("[LaTeXWriter] Đang viết Conclusion...")
@@ -401,7 +439,8 @@ class LaTeXWriter:
             claim_ledger_text=claim_ledger_text,
             user_topic=user_topic,
             dataset_info=dataset_info,
-            dataset_abbr=dataset_abbr
+            dataset_abbr=dataset_abbr,
+            research_mode=research_mode,
         )
 
         print("[LaTeXWriter] Đang soạn thảo Phụ lục và Tuyên bố Tái Lập (Reproducibility)...")
@@ -416,10 +455,16 @@ class LaTeXWriter:
             dataset_info=dataset_info,
             dataset_abbr=dataset_abbr,
             experiment_design=experiment_design,
-            claim_ledger=claim_ledger
+            claim_ledger=claim_ledger,
+            research_mode=research_mode,
+            data_source_str=data_source_str,
         )
 
         # 8. Ráp vào template và thay thế các Placeholder định lượng
+        if is_empirical:
+            tex_content = tex_content.replace(r"\section{Proposed Methodology}", r"\section{Evaluated Methods \& Paradigms}")
+        elif research_mode == "reproduce":
+            tex_content = tex_content.replace(r"\section{Proposed Methodology}", r"\section{Reproduced Methodology}")
         tex_content = tex_content.replace("<<TITLE>>", title.strip())
         tex_content = tex_content.replace("<<ABSTRACT>>", self._sanitize_section(abstract, "Abstract"))
         tex_content = tex_content.replace("<<TEASER_FIGURE>>", teaser_latex)
@@ -856,9 +901,46 @@ Text to translate:
         claim_ledger_text: str,
         user_topic: str = "",
         dataset_info: str = "",
-        dataset_abbr: str = ""
+        dataset_abbr: str = "",
+        research_mode: str = "innovate",
+        data_manifest: Optional[Dict[str, Any]] = None,
+        evaluated_methods: Optional[List[Dict[str, Any]]] = None,
     ) -> tuple:
         abbr = method_info.get("abbreviation", "OURS")
+        if research_mode == "empirical":
+            m_names = [m.get("name", "") for m in (evaluated_methods or []) if isinstance(m, dict)]
+            ds_src = (data_manifest or {}).get("data_source", "")
+            prompt = f"""Generate Title (<= 16 words) and Abstract (strictly 130-165 words) for an EMPIRICAL COMPARATIVE STUDY on: "{user_topic}".
+Evaluated Existing Methods: {json.dumps(m_names)}
+Research Problem / Questions: {problem_info.get('problem')}
+Benchmark Dataset: {dataset_info} (Abbreviation: \\textsc{{{dataset_abbr}}}, Data Source: {ds_src})
+
+MANDATORY RULES:
+1. EMPIRICAL STUDY FRAMING (NO FAKE NOVELTY): Do NOT claim to invent a new algorithm or write "We propose <acronym>" or use \\textsc{{OURS}}. Frame honestly as a controlled comparative empirical study / benchmark of existing paradigms.
+2. STRUCTURE (130-165 words): (1) Why {user_topic} matters and what trade-offs motivate a controlled comparison; (2) Which existing paradigms are evaluated and on what dataset (\\textsc{{{dataset_abbr}}}); (3) Key quantitative findings and trade-offs from the Verified Ledger, citing 1-2 core metrics.
+3. MANDATORY UNIT SUFFIX: Always append explicit units ('seconds', 'ms', 'tokens', '\\%') where applicable.
+4. ZERO-SPIN INTEGRITY: Report results faithfully from the ledger. If offline/proxy or subset evaluation is used, state the evaluated sample scope accurately.
+5. NO raw code variable names or backticks. Strict academic English.
+
+Ledger for verification:
+{claim_ledger_text}
+
+Format response as:
+TITLE: <Academic Title <= 16 words>
+ABSTRACT: <Concise, impactful abstract ~145 words>
+"""
+            res = self.llm.generate(prompt)
+            title = ""
+            abstract = f"This paper presents a controlled empirical evaluation of established paradigms for {user_topic} on \\textsc{{{dataset_abbr}}}."
+            for line in res.split("\n"):
+                if line.startswith("TITLE:"):
+                    title = line.replace("TITLE:", "").strip()
+                elif line.startswith("ABSTRACT:"):
+                    abstract = line.replace("ABSTRACT:", "").strip()
+            if not title:
+                title = f"An Empirical Comparative Study of {user_topic}"
+            return title, abstract
+
         prompt = f"""Generate Title (<= 15 words) and Abstract (strictly 130-160 words) for research topic: "{user_topic}".
 Method Name: {method_info.get('method_name')}
 Method Abbreviation: {abbr}
@@ -905,9 +987,42 @@ ABSTRACT: <Concise, impactful abstract ~140 words>
         claim_ledger_text: str,
         user_topic: str = "",
         dataset_info: str = "",
-        dataset_abbr: str = ""
+        dataset_abbr: str = "",
+        research_mode: str = "innovate",
+        research_questions: Optional[List[str]] = None,
+        evaluated_methods: Optional[List[Dict[str, Any]]] = None,
     ) -> str:
         abbr = method_info.get("abbreviation", "OURS")
+        if research_mode == "empirical":
+            m_names = [m.get("name", "") for m in (evaluated_methods or []) if isinstance(m, dict)]
+            rqs_str = "\n".join([f"- {rq}" for rq in (research_questions or [])])
+            prompt = f"""Write a publication-grade Introduction section in LaTeX for an EMPIRICAL COMPARATIVE STUDY.
+Topic: "{user_topic}"
+Evaluated Existing Methods: {json.dumps(m_names)}
+Research Problem: {problem_info.get('problem')}
+Research Questions:
+{rqs_str}
+Benchmark Dataset: {dataset_info} (Abbreviation: \\textsc{{{dataset_abbr}}})
+
+Available Citations (use \\cite{{...}}):
+{cite_keys}
+
+CRITICAL SCIENTIFIC REQUIREMENTS:
+- Motivate the significance of "{user_topic}" and the practical/scientific need for a controlled head-to-head comparison of existing approaches ({', '.join(m_names) or 'established paradigms'}).
+- DO NOT invent a novel algorithm or claim "we propose a new framework \\textsc{{{abbr}}}". Frame explicitly as an empirical benchmark and comparative analysis.
+- Define the dataset on first mention: "{dataset_info} (\\textsc{{{dataset_abbr}}})", and refer to it as \\textsc{{{dataset_abbr}}} thereafter.
+- Reference Figure~\\ref{{fig:teaser}} as the primary comparative evaluation summary (not an architectural diagram).
+- STRICTLY NO FIGURES OR WIREFRAMES: DO NOT generate any \\begin{{figure}}, \\fbox, \\framebox, or \\rule.
+- DO NOT dump metric tables here (detailed numbers belong in Section 5).
+- Conclude with: "The primary contributions of this empirical study are summarized as follows:" and an \\begin{{itemize}} ... \\end{{itemize}} with 3 crisp items:
+  (1) Systematic comparative evaluation protocol across established paradigms for {user_topic};
+  (2) Empirical analysis of accuracy, complexity/difficulty scaling, and computational cost trade-offs on \\textsc{{{dataset_abbr}}};
+  (3) Transparent, verifiable execution artifacts and data-provenance documentation.
+- MANDATORY LANGUAGE: Strictly formal academic English only.
+Provide ONLY LaTeX body text. No \\section headers.
+"""
+            return self.llm.generate(prompt)
+
         prompt = f"""Write a publication-grade Introduction section in LaTeX.
 Topic: "{user_topic}"
 Method: {method_info.get('method_name')} (\\textsc{{{abbr}}})
@@ -943,17 +1058,23 @@ Provide ONLY LaTeX body text. No \\section headers.
         method_info: Dict[str, Any],
         user_topic: str = "",
         dataset_info: str = "",
-        dataset_abbr: str = ""
+        dataset_abbr: str = "",
+        research_mode: str = "innovate",
     ) -> str:
         abbr = method_info.get("abbreviation", "OURS")
+        study_line = (
+            f"Comparative Empirical Study on: {user_topic}"
+            if research_mode == "empirical"
+            else f"Proposed: {method_info.get('method_name')} (\\textsc{{{abbr}}})"
+        )
         prompt = f"""Write a comprehensive Related Work section in LaTeX for "{user_topic}".
-Proposed: {method_info.get('method_name')} (\\textsc{{{abbr}}})
+{study_line}
 Available Citations (MUST use \\cite{{...}}):
 {cite_keys}
 
 CRITICAL REQUIREMENTS:
 - COMPREHENSIVE CITATIONS: Cite at least 15-25 distinct references from the available list across your subsections.
-- Organize into 2-3 logical \\subsection headers without numeric prefixes (e.g., \\subsection{{Physical and Numerical Hydrodynamic Modeling}}, \\subsection{{Data-Driven Spatiotemporal Deep Learning for Flood Prediction}}).
+- Organize into 2-3 logical \\subsection headers without numeric prefixes tailored strictly to "{user_topic}".
 - LANGUAGE: Write strictly and entirely in academic English.
 Provide ONLY LaTeX body text. No \\section headers.
 """
@@ -967,7 +1088,9 @@ Provide ONLY LaTeX body text. No \\section headers.
         dataset_info: str = "",
         dataset_abbr: str = "",
         real_metrics: Optional[List[str]] = None,
-        real_datasets: Optional[List[str]] = None
+        real_datasets: Optional[List[str]] = None,
+        research_mode: str = "innovate",
+        research_questions: Optional[List[str]] = None,
     ) -> str:
         abbr = method_info.get("abbreviation", "OURS")
         manifest = method_info.get("model_manifest", {})
@@ -982,6 +1105,24 @@ GROUND TRUTH IMPLEMENTATION MANIFEST (From Source Code):
 """
         metrics_guide = f"- Target Evaluation Metrics Evaluated: {', '.join(real_metrics)}" if real_metrics else ""
         datasets_guide = f"- Evaluated Dataset Subsets: {', '.join(real_datasets)}" if real_datasets else ""
+        rqs_guide = f"- Research Questions: {json.dumps(research_questions)}" if research_questions else ""
+        if research_mode == "empirical":
+            prompt = f"""Write Problem Formulation & Evaluation Protocol section in LaTeX for an EMPIRICAL BENCHMARK on "{user_topic}".
+Problem: {problem_info.get('problem')}
+{rqs_guide}
+Formalism: {method_info.get('mathematical_formulation')}
+Benchmark Dataset: {dataset_info} (\\textsc{{{dataset_abbr}}})
+{metrics_guide}
+{datasets_guide}
+{manifest_context}
+CRITICAL REQUIREMENTS:
+- Formally define the task input/output space, the Research Questions being tested, and the exact mathematical definitions of the evaluation metrics ({', '.join(real_metrics) if real_metrics else 'task-appropriate metrics'}).
+- DO NOT invent a fake composite loss \\mathcal{{L}}_{{task}} + \\lambda \\mathcal{{L}}_{{reg}} if the task is non-neural/retrieval/comparative!
+- STRICT DOMAIN RELEVANCE: Define ONLY metrics relevant to "{user_topic}". Keep equations compact (~45 characters wide).
+Provide ONLY LaTeX body text with clean equations. No \\section headers.
+"""
+            return self.llm.generate(prompt)
+
         prompt = f"""Write Problem Formulation & Evaluation Protocol section in LaTeX for "{user_topic}".
 Method: {method_info.get('method_name')} (\\textsc{{{abbr}}})
 Problem: {problem_info.get('problem')}
@@ -1005,7 +1146,9 @@ Provide ONLY LaTeX body text with clean equations. No \\section headers.
         formulation: str = "",
         user_topic: str = "",
         dataset_info: str = "",
-        dataset_abbr: str = ""
+        dataset_abbr: str = "",
+        research_mode: str = "innovate",
+        evaluated_methods: Optional[List[Dict[str, Any]]] = None,
     ) -> str:
         abbr = method_info.get("abbreviation", "OURS")
         manifest = method_info.get("model_manifest", {})
@@ -1018,6 +1161,26 @@ GROUND TRUTH IMPLEMENTATION MANIFEST (From Source Code):
 - Optimizer: {manifest.get('optimizer', '')}
 """
         formulation_context = formulation[:2000] if formulation else ""
+        if research_mode == "empirical":
+            methods_json = json.dumps(evaluated_methods or [], indent=2)
+            prompt = f"""Write the Evaluated Methods & Paradigms section in LaTeX for a comparative study on:
+Topic: {user_topic}
+Evaluated Existing Methods:
+{methods_json}
+Method Overview: {method_info.get('intuition', '')}
+Mathematical Formulation: {method_info.get('mathematical_formulation', '')}
+{manifest_context}
+PROBLEM FORMULATION NOTATION (Build consistently upon this):
+{formulation_context}
+
+CRITICAL REQUIREMENTS:
+- Describe each evaluated paradigm clearly and objectively in dedicated \\subsection blocks (no numeric prefixes), highlighting how they differ mechanistically, their retrieval/inference steps, and their expected accuracy-vs-cost trade-offs.
+- DO NOT claim any of these existing methods as "our proposed method" or invent fake equations unrelated to "{user_topic}" (no GRU cell gates unless this is a recurrent neural network).
+- Explicitly describe any deterministic offline components (e.g. local dense embeddings / lexical matching / heuristic extraction) if used in the implementation.
+Provide ONLY LaTeX body text. No \\section headers.
+"""
+            return self.llm.generate(prompt)
+
         prompt = f"""Write Proposed Methodology section in LaTeX for:
 Topic: {user_topic}
 Method: {method_info.get('method_name')} (\\textsc{{{abbr}}})
@@ -1048,34 +1211,47 @@ Provide ONLY LaTeX body text. No \\section headers.
         dataset_info: str = "",
         dataset_abbr: str = "",
         real_metrics: Optional[List[str]] = None,
-        real_datasets: Optional[List[str]] = None
+        real_datasets: Optional[List[str]] = None,
+        research_mode: str = "innovate",
+        data_manifest: Optional[Dict[str, Any]] = None,
+        fig_captions_map: Optional[Dict[str, str]] = None,
     ) -> str:
         figs_latex = ""
         fig_blocks = []
+        fig_captions_map = fig_captions_map or {}
+        is_empirical = (research_mode == "empirical")
         for idx, fig_file in enumerate(actual_figures):
             clean_id = os.path.splitext(fig_file)[0].lower()
-            # Hình đa panel hoặc đồ thị phân tán/phần dư/generation cần mở rộng sang cả 2 cột để chữ không bị nhỏ
             is_wide_fig = any(k in clean_id for k in ["scatter", "residual", "dynamics", "figure_3", "figure_1", "trajectory", "panel", "image", "sample", "generated", "kl", "divergence", "comparison", "benchmark"])
             fig_env = "figure*" if is_wide_fig else "figure"
             width_spec = "0.92\\textwidth" if is_wide_fig else "\\columnwidth"
 
-            if any(k in clean_id for k in ["compare", "benchmark", "accuracy", "acc", "metric", "figure_2"]):
-                cap = f"\\textbf{{Quantitative benchmark comparison against baseline models.}} Comparative evaluation across key performance and optimization metrics on \\textsc{{{dataset_abbr}}}."
+            custom_cap = fig_captions_map.get(fig_file, "").strip()
+            if custom_cap:
+                safe_cap = custom_cap.replace("&", r"\&").replace("%", r"\%").replace("_", r"\_")
+                cap = f"\\textbf{{Empirical result ({fig_file.replace('_', ' ')}).}} {safe_cap}"
+                lbl = f"fig:figure_{idx+1}"
+            elif any(k in clean_id for k in ["compare", "benchmark", "accuracy", "acc", "metric", "figure_2"]):
+                cap = f"\\textbf{{Quantitative benchmark comparison across evaluated methods.}} Comparative evaluation across key performance metrics on \\textsc{{{dataset_abbr}}}."
                 lbl = "fig:benchmark_comparison"
             elif any(k in clean_id for k in ["loss", "convergence", "dynamics", "train", "curve", "figure_1"]):
-                cap = f"\\textbf{{Empirical optimization and convergence dynamics of \\textsc{{{method_abbr}}}.}} Loss trajectory over training iterations on \\textsc{{{dataset_abbr}}}."
+                cap = (
+                    f"\\textbf{{Empirical evaluation dynamics on \\textsc{{{dataset_abbr}}}.}} Performance behavior across evaluated methods."
+                    if is_empirical
+                    else f"\\textbf{{Empirical optimization and convergence dynamics of \\textsc{{{method_abbr}}}.}} Loss trajectory over training iterations on \\textsc{{{dataset_abbr}}}."
+                )
                 lbl = "fig:convergence_dynamics"
             elif any(k in clean_id for k in ["ablation", "tradeoff", "residual", "sensitivity", "dist", "scatter", "figure_3"]):
-                cap = f"\\textbf{{Empirical delta and scientific trade-off analysis.}} Relative metric differences of \\textsc{{{method_abbr}}} compared to the baseline on \\textsc{{{dataset_abbr}}}."
+                cap = f"\\textbf{{Empirical trade-off and sensitivity analysis.}} Performance vs. resource/complexity across evaluated methods on \\textsc{{{dataset_abbr}}}."
                 lbl = "fig:ablation_tradeoff"
             elif any(k in clean_id for k in ["image", "sample", "generated"]):
-                cap = f"\\textbf{{Qualitative sample synthesis of \\textsc{{{method_abbr}}}.}} Visual comparison of empirical manifold samples synthesized across benchmark distributions."
+                cap = f"\\textbf{{Qualitative sample synthesis.}} Visual comparison across benchmark distributions."
                 lbl = "fig:qualitative_samples"
             elif any(k in clean_id for k in ["kl", "divergence"]):
-                cap = f"\\textbf{{Distributional fidelity evaluation (KL Divergence).}} Comparative evaluation of sample divergence against target empirical manifolds."
+                cap = f"\\textbf{{Distributional fidelity evaluation (KL Divergence).}} Comparative evaluation against target empirical manifolds."
                 lbl = "fig:kl_divergence"
             else:
-                cap = f"\\textbf{{Empirical outcome visualization of \\textsc{{{method_abbr}}}.}} Performance metrics evaluated on \\textsc{{{dataset_abbr}}}."
+                cap = f"\\textbf{{Empirical outcome visualization.}} Performance metrics evaluated on \\textsc{{{dataset_abbr}}}."
                 lbl = f"fig:figure_{idx+1}"
 
             block = f"""\\begin{{{fig_env}}}[htbp]
@@ -1089,11 +1265,22 @@ Provide ONLY LaTeX body text. No \\section headers.
 
         metrics_list_str = json.dumps(real_metrics if real_metrics else experiment_design.get('metrics', []))
         datasets_list_str = json.dumps(real_datasets) if real_datasets else f"\\textsc{{{dataset_abbr}}}"
+        data_manifest = data_manifest or {}
+        provenance_block = (
+            f"Data Source: {data_manifest.get('data_source', 'unspecified')} | "
+            f"Provider: {data_manifest.get('provider', 'N/A')} | "
+            f"URL: {data_manifest.get('url', 'N/A')} | "
+            f"Samples: {data_manifest.get('num_samples', 'N/A')} | "
+            f"Disclosure: {data_manifest.get('disclosure_note', 'Real public benchmark subset.')}"
+        )
+        method_hdr = "Evaluated Methods" if is_empirical else f"Proposed Method: \\textsc{{{method_abbr}}}"
+        fig_refs_list = ", ".join([f"Figure~\\ref{{{lbl}}}" for lbl, _, _ in fig_blocks])
         prompt = f"""Write the Experimental Setup & Empirical Evaluation section in LaTeX for "{user_topic}".
-Proposed Method: \\textsc{{{method_abbr}}}
+{method_hdr}
 Benchmark Dataset: {dataset_info} (\\textsc{{{dataset_abbr}}})
+Data Provenance (MANDATORY TO DOCUMENT IN SETUP): {provenance_block}
 Evaluated Subsets / Datasets: {datasets_list_str}
-Baselines Evaluated: {json.dumps(experiment_design.get('baselines', []))}
+Methods Evaluated: {json.dumps(experiment_design.get('baselines', []))}
 Metrics Measured: {metrics_list_str}
 
 VERIFIED NUMERICAL EVIDENCE (All numerical claims in prose MUST strictly match this ledger):
@@ -1102,22 +1289,19 @@ VERIFIED NUMERICAL EVIDENCE (All numerical claims in prose MUST strictly match t
 MANDATORY EMBEDDED TABLE:
 {empirical_table_latex}
 
-FIGURES AVAILABLE (Reference all of them in prose):
+FIGURES AVAILABLE (Reference ALL of them by their exact labels in prose: Figure~\\ref{{fig:teaser}}{', ' + fig_refs_list if fig_refs_list else ''}):
 {figs_latex}
 
 CRITICAL SECTION STRUCTURE:
 - Divide the section into TWO balanced subsections:
-  \\subsection{{Experimental Setup and Benchmark Configuration}}
-  \\subsection{{Quantitative Results and Performance Analysis}}
-  (DO NOT leave a single solitary subsection).
-- MANDATORY FIGURE CITATIONS: You MUST explicitly reference ALL available figures in prose:
-  * Reference Figure~\\ref{{fig:teaser}} (or Figure~\\ref{{fig:convergence_dynamics}}) when discussing training loss, convergence dynamics, and empirical evaluation trajectories.
-  * Reference Figure~\\ref{{fig:benchmark_comparison}} when discussing benchmark comparisons across individual metrics.
-  * Reference Figure~\\ref{{fig:ablation_tradeoff}} when discussing relative metric differences and methodological trade-offs.
-- NUMERICAL AND ROUNDING CONSISTENCY: Use consistent 1-decimal rounding for percentage changes to strictly match verified metrics from the Claim Ledger.
-- Follow verified metrics strictly. Report empirical trade-offs transparently.
-- NO RAW CODE VARIABLE NAMES: Never print raw dictionary keys with underscores like `test_accuracy` in prose. Use proper academic terminology.
-- LANGUAGE: Write strictly and entirely in academic English.
+  \\subsection{{Experimental Setup and Data Provenance}}
+  \\subsection{{Quantitative Results and Comparative Analysis}}
+- In Experimental Setup: explicitly state the exact dataset source, split, number of evaluated samples, and exact implementation details (e.g., local dense embeddings / Gemini LLM calls / budget) from the setup.
+- EMPIRICAL STUDY WORDING: {'Refer to the evaluated methods objectively (e.g., "the evaluated T2RAG paradigm" or "the focal paradigm"); NEVER write "our proposed framework" or "we propose".' if is_empirical else 'Describe the proposed method and baselines consistently.'}
+- MANDATORY FIGURE CITATIONS: Explicitly reference Figure~\\ref{{fig:teaser}} and EVERY figure label above ({fig_refs_list}) in prose, explaining what each figure actually shows!
+- NUMERICAL AND ROUNDING CONSISTENCY: Strictly match the Verified Numerical Evidence above. Never invent numbers.
+- NO RAW CODE VARIABLE NAMES: Never print raw dictionary keys with underscores in prose.
+- LANGUAGE: Strictly academic English.
 Provide ONLY LaTeX body text. No \\section headers.
 """
         res = self.llm.generate(prompt)
@@ -1137,24 +1321,33 @@ Provide ONLY LaTeX body text. No \\section headers.
         user_topic: str = "",
         dataset_info: str = "",
         dataset_abbr: str = "",
-        env_info: Optional[EnvironmentInfo] = None
+        env_info: Optional[EnvironmentInfo] = None,
+        research_mode: str = "innovate",
+        data_manifest: Optional[Dict[str, Any]] = None,
     ) -> str:
         abbr = method_info.get("abbreviation", "OURS")
+        is_empirical = (research_mode == "empirical")
+        ds_note = (data_manifest or {}).get("disclosure_note", "")
+        focus_line = (
+            f"Comparative Findings across Evaluated Paradigms (Data Source: {(data_manifest or {}).get('data_source', '')})"
+            if is_empirical
+            else f"Method Name: {method_info.get('method_name')} (\\textsc{{{abbr}}})"
+        )
         prompt = f"""Write Discussion, Limitations & Broader Impact section in LaTeX for "{user_topic}".
-Method Name: {method_info.get('method_name')} (\\textsc{{{abbr}}})
+{focus_line}
 Benchmark Dataset: \\textsc{{{dataset_abbr}}} ({dataset_info})
+{('Data Scope Disclosure: ' + ds_note) if ds_note else ''}
 
 VERIFIED RESULTS & TRADE-OFFS:
 {claim_ledger_text}
 
 CRITICAL RULES:
-1. METHODOLOGICAL INSIGHT: Analyze the empirical dynamics of \\textsc{{{abbr}}}, explaining why certain components succeeded and dissecting any observed performance trade-offs. If the method underperformed or showed marginal degradation on certain metrics, analyze the underlying mechanism honestly and rigorously (e.g., potential over-regularization, gradient conflicts, or dimensionality mismatch).
-2. LIMITATIONS: Discuss genuine limitations (e.g. evaluation scope on \\textsc{{{dataset_abbr}}}, sensitivity to hyperparameter choices, lack of multi-seed variance).
-3. BROADER IMPACT: Discuss practical applications, ethical considerations, and safety implications relevant to {user_topic}.
+1. ANALYTICAL INSIGHT: Analyze why different evaluated methods succeeded or failed on \\textsc{{{dataset_abbr}}}, dissecting observed accuracy-vs-latency/cost trade-offs honestly.
+2. LIMITATIONS: Discuss genuine limitations transparently (evaluation subset size, deterministic/offline retrieval or extraction vs. full-scale LLM calls if applicable, sensitivity to hyperparameters).
+3. BROADER IMPACT: Discuss practical deployment guidance for choosing among the evaluated paradigms in {user_topic}.
 4. STRICT PROHIBITIONS:
-   - DO NOT repeat hardware specifications (hardware platform is already documented in Appendix Table~\\ref{{tab:compute_environment}}).
-   - DO NOT print raw code variables or dictionary keys (e.g. no best_test_mse, no final_train_loss). Use standard academic terminology.
-   - DO NOT recite the numbers from Table 1 line by line.
+   - DO NOT repeat hardware specifications (already in Appendix Table~\\ref{{tab:compute_environment}}).
+   - DO NOT print raw code variable names or recite Table 1 line by line.
 Provide ONLY LaTeX body text. No \\section headers.
 """
         return self.llm.generate(prompt)
@@ -1166,11 +1359,18 @@ Provide ONLY LaTeX body text. No \\section headers.
         claim_ledger_text: str,
         user_topic: str = "",
         dataset_info: str = "",
-        dataset_abbr: str = ""
+        dataset_abbr: str = "",
+        research_mode: str = "innovate",
     ) -> str:
         abbr = method_info.get("abbreviation", "OURS")
+        is_empirical = (research_mode == "empirical")
+        head_line = (
+            f"Study Type: Empirical Comparative Benchmark on {user_topic}"
+            if is_empirical
+            else f"Method: {method_info.get('method_name')} (\\textsc{{{abbr}}})"
+        )
         prompt = f"""Write Conclusion section in LaTeX for "{user_topic}".
-Method: {method_info.get('method_name')} (\\textsc{{{abbr}}})
+{head_line}
 Benchmark: \\textsc{{{dataset_abbr}}}
 
 VERIFIED RESULTS & ZERO-SPIN CONSTRAINTS:
@@ -1178,12 +1378,8 @@ VERIFIED RESULTS & ZERO-SPIN CONSTRAINTS:
 
 MANDATORY RULES:
 - Length: Strictly 120-150 words.
-- ZERO FALSE CLAIMS: You MUST strictly adhere to the empirical evidence in the ledger:
-  * If convergence was slower (e.g. 100 vs 53 episodes), DO NOT claim "faster convergence", "faster training stability", or "superior policy convergence"! State honestly that convergence required more episodes or was delayed.
-  * DO NOT claim "enhanced disturbance rejection" or unmeasured properties that were never evaluated.
-  * Accurately emphasize the balanced reality: achieving matching peak reward with reduced wall-clock training overhead, while identifying optimization trade-offs in average return and convergence sample efficiency.
-- Synthesize the core contribution and key empirical takeaways without reciting lengthy decimal percentage lists.
-- Outline 2 concrete, promising avenues for future methodological work.
+- ZERO FALSE CLAIMS: Strictly adhere to the empirical evidence in the ledger. Do NOT invent unmeasured claims or claim a "novel method" if Study Type is Empirical Comparative Benchmark.
+- Summarize the core comparative takeaways (which method performed best on which metric and at what computational cost) and outline 2 concrete avenues for future evaluation/engineering work.
 - Write strictly and entirely in academic English.
 Provide ONLY LaTeX body text. No \\section headers.
 """
@@ -1201,7 +1397,9 @@ Provide ONLY LaTeX body text. No \\section headers.
         dataset_info: str = "",
         dataset_abbr: str = "",
         experiment_design: Optional[Dict[str, Any]] = None,
-        claim_ledger: Optional[ClaimLedger] = None
+        claim_ledger: Optional[ClaimLedger] = None,
+        research_mode: str = "innovate",
+        data_source_str: str = "",
     ) -> tuple:
         abbr = method_info.get("abbreviation", "OURS")
         abbr_tex = f"\\textsc{{{abbr}}}"
@@ -1264,26 +1462,72 @@ The algorithmic updates and estimator properties follow standard convergence and
 
         # Xây dựng các hàng động cho Table 2 dựa trên siêu tham số thực tế của domain
         custom_hparams = experiment_design.get("hyperparameters", []) if experiment_design else []
+        def _esc_tex_cell(val: Any) -> str:
+            s = str(val or "")
+            # Protect math segments while escaping _, %, & in plain text
+            parts = re.split(r"(\$.*?\$)", s)
+            out = []
+            for idx_p, part in enumerate(parts):
+                if idx_p % 2 == 1:
+                    out.append(part)
+                else:
+                    p_clean = part.replace("&", r"\&").replace("%", r"\%").replace("_", r"\_")
+                    out.append(p_clean)
+            return "".join(out)
+
+        safe_ds_info_cell = _esc_tex_cell(safe_dataset_info)
+        safe_ds_abbr = _esc_tex_cell(dataset_abbr)
+        safe_ds_src = _esc_tex_cell(data_source_str or "unspecified")
+        safe_baselines = _esc_tex_cell(baselines_str)
+        safe_metrics = _esc_tex_cell(metrics_str)
+        first_row = (
+            f"Study Mode & Empirical Comparative Benchmark \\\\"
+            if research_mode == "empirical"
+            else f"Proposed Framework & {abbr_tex} \\\\"
+        )
         rows = [
-            f"Proposed Framework & {abbr_tex} \\\\",
-            f"Evaluated Benchmark Dataset & {safe_dataset_info} (\\textsc{{{dataset_abbr}}}) \\\\",
-            f"Evaluated Baseline Models & {baselines_str} \\\\",
-            f"Quantitative Evaluation Metrics & {metrics_str} \\\\",
+            first_row,
+            f"Evaluated Benchmark Dataset & {safe_ds_info_cell} (\\textsc{{{safe_ds_abbr}}}) \\\\",
+            f"Data Provenance & \\texttt{{{safe_ds_src}}} \\\\",
+            f"Evaluated Methods & {safe_baselines} \\\\",
+            f"Quantitative Evaluation Metrics & {safe_metrics} \\\\",
         ]
         if custom_hparams:
             for p_name, p_val in custom_hparams:
-                rows.append(f"{p_name} & {p_val} \\\\")
+                spn = _esc_tex_cell(p_name)
+                spv = _esc_tex_cell(p_val)
+                rows.append(f"{spn} & {spv} \\\\")
         else:
             rows.extend([
-                r"Optimization Algorithm & AdamW ($\eta=10^{-3}$, decoupled weight decay $\beta=10^{-2}$) \\",
-                r"Training Protocol & Standard mini-batch optimization with early validation stopping \\",
                 r"Random Seed & Deterministic seed 42 \\",
-                r"Evaluation Protocol & Single-split controlled test benchmark (zero leakage) \\",
+                r"Evaluation Protocol & Controlled comparative evaluation (identical split) \\",
             ])
         rows.append(r"Hardware Compute Platform & See Table~\ref{tab:compute_environment} for verified execution infrastructure \\")
         table_rows_str = "\n".join(rows)
 
-        app_impl_template = r"""\subsection{Experimental Configuration and Parameter Specifications}
+        if research_mode == "empirical":
+            app_impl_template = r"""\subsection{Experimental Configuration and Parameter Specifications}
+Table~\ref{tab:hyperparameters} details the standardized algorithmic, benchmark, and environmental parameters utilized in our empirical evaluation.
+
+\begin{table*}[t]
+\centering
+\small
+\caption{\textbf{Standardized configuration and benchmark specification across evaluated methods.}}
+\vspace{0.4em}
+\begin{tabular}{p{0.32\textwidth}p{0.63\textwidth}}
+\toprule
+\textbf{Specification Parameter} & \textbf{Configuration Value} \\
+\midrule
+__TABLE_ROWS__
+\bottomrule
+\end{tabular}
+\label{tab:hyperparameters}
+\end{table*}
+
+\subsection{Comparative Protocol}
+All evaluated methods were executed under standardized evaluation protocols on identical data splits without asymmetric resource allocation."""
+        else:
+            app_impl_template = r"""\subsection{Experimental Configuration and Parameter Specifications}
 Table~\ref{tab:hyperparameters} details the standardized algorithmic, benchmark, and environmental parameters utilized in our empirical evaluation.
 
 \begin{table*}[t]

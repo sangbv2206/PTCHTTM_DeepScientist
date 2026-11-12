@@ -65,19 +65,27 @@
                 <option value="">Tự động chọn (Auto-select)</option>
               </select>
             </label>
-            <div class="form-row">
-              <label>Vòng phản biện
-                <input id="iterations" type="number" min="1" max="5" value="1" />
-              </label>
-              <label>Mô hình LLM
-                <input id="model" value="gemini-3.5-flash-lite" placeholder="e.g. gemini-3.5-flash-lite" />
+            <label>Chế độ nghiên cứu
+              <select id="mode">
+                <option value="empirical" selected>So sánh thực nghiệm (Empirical Study - Mặc định)</option>
+                <option value="innovate">Đề xuất phương pháp mới (Innovate)</option>
+              </select>
+            </label>
+            <div class="hidden" aria-hidden="true">
+              <div class="form-row">
+                <label>Vòng phản biện
+                  <input id="iterations" type="number" min="1" max="5" value="1" />
+                </label>
+                <label>Mô hình LLM
+                  <input id="model" value="gemini-3.5-flash-lite" placeholder="e.g. gemini-3.5-flash-lite" />
+                </label>
+              </div>
+              <label class="toggle-row">
+                <input id="offline" type="checkbox" />
+                <span class="toggle"></span>
+                <span>Chỉ dùng tài liệu ngoại tuyến (Offline)</span>
               </label>
             </div>
-            <label class="toggle-row">
-              <input id="offline" type="checkbox" />
-              <span class="toggle"></span>
-              <span>Chỉ dùng tài liệu ngoại tuyến (Offline)</span>
-            </label>
             <button class="primary-button" type="submit">
               <span>Bắt đầu nghiên cứu</span>
               <span>↗</span>

@@ -9,14 +9,15 @@ HIGHER_IS_BETTER_METRICS = {
     "accuracy", "acc", "top1_acc", "top5_acc", "f1", "f1_macro", "f1_micro", "f1_weighted",
     "precision", "recall", "auc", "roc_auc", "r2", "r2_score", "c_index", "retention",
     "reward", "return", "hit_ratio", "ndcg", "mrr", "bleu", "rouge", "success_rate",
-    "throughput", "throughput_steps_per_sec", "tokens_per_second", "steps_per_sec"
+    "throughput", "throughput_steps_per_sec", "tokens_per_second", "steps_per_sec",
+    "exact_match", "exact match", "faithfulness", "score"
 }
 
 LOWER_IS_BETTER_METRICS = {
     "loss", "val_loss", "train_loss", "test_loss", "mse", "test_mse", "mae", "test_mae",
     "rmse", "brier", "brier_score", "latency_ms", "inference_latency", "perplexity", "ppl",
     "energy_joules", "error", "error_rate", "asmd", "kl_divergence", "kldiv", "time", "seconds", "elapsed",
-    "convergence_episode", "s_per_1000_steps", "s_per_step"
+    "convergence_episode", "s_per_1000_steps", "s_per_step", "token_efficiency", "tokens_per_correct", "tokens"
 }
 
 EXCLUDE_COLUMNS = {
@@ -32,7 +33,7 @@ def is_higher_is_better(metric_name: str) -> bool:
     m = metric_name.lower().replace("-", "_")
     if any(l in m for l in LOWER_IS_BETTER_METRICS):
         return False
-    if any(h in m for h in HIGHER_IS_BETTER_METRICS) or m == "score":
+    if any(h in m for h in HIGHER_IS_BETTER_METRICS) or re.search(r"\bem\b", m):
         return True
     return False
 
@@ -187,10 +188,17 @@ class ClaimLedger:
             return
 
         proposed_name = None
-        for name in model_names:
-            if any(k in name.lower() for k in ["ours", "proposed", "deepscientist", "upgraded", "model_1", "run_1"]):
-                proposed_name = name
-                break
+        focal_hint = str(self.config_data.get("focal_method_name", "")).strip().lower()
+        if focal_hint:
+            for name in model_names:
+                if focal_hint in name.lower() or name.lower() in focal_hint:
+                    proposed_name = name
+                    break
+        if not proposed_name:
+            for name in model_names:
+                if any(k in name.lower() for k in ["ours", "proposed", "focal", "deepscientist", "upgraded", "model_1", "run_1"]):
+                    proposed_name = name
+                    break
         if not proposed_name:
             proposed_name = model_names[-1]
 

@@ -151,18 +151,22 @@ Available PyTorch Experiment Benchmark Templates in the system:
 
 TASK:
 1. Understand the core scientific task and machine learning domain of the research topic.
+   Identify its PROBLEM FAMILY: what is the experimental task, what is the input, what is predicted/produced, and what metric is used.
 2. Select the BEST matching template name strictly from the available templates list above.
    - For health impact, clinical trials, cohort studies, hazard analysis, biomass smoke exposure, or causal questions -> select "causal_trial_emulation".
-   - For recommender / user-item ranking -> select "recommender_system".
    - For reinforcement learning / control / robotics / decision making -> select "reinforcement_learning".
-   - For graph neural networks / network topology -> select "gnn_graph_learning".
    - For sequential time-series / load forecasting / weather / sensors -> select "time_series_forecasting".
-   - For language / LLM / NLP / text -> select "nanoGPT".
+   - For training / architecture of autoregressive language models (next-token prediction, perplexity) -> select "nanoGPT".
    - For generative image diffusion / score-based models -> select "2d_diffusion".
    - For mathematical learning dynamics / generalization / grokking -> select "grokking".
-3. Assign a confidence score from 1 to 10 (1 = completely unrelated/unsupported, 10 = perfect match).
-4. If confidence < 6 or if the topic is outside the scope of all available templates (e.g. general computer vision, image classification, quantum hardware, pure physical simulation), set is_supported = false. The pipeline will automatically route to Autonomous Zero-Shot Coding (CoderAgent).
-5. Provide concise reasoning and suggestions in Vietnamese.
+3. TASK-LEVEL COMPATIBILITY RULE (most important): a template is only suitable if its experiment trains/evaluates the SAME KIND
+   of task with the SAME KIND of metric as the topic. Sharing a data modality is NOT enough.
+   Examples of UNSUPPORTED topics: retrieval-augmented generation, question answering, information retrieval, knowledge-graph
+   or triplet reasoning, code generation, test case generation, competitive programming, software testing, prompting, LLM evaluation, agent workflows, recommender systems, image classification, object detection, tabular classification, speech, quantum hardware.
+   (e.g. a RAG paper or a Test Case Generation / Competitive Programming paper is NOT compatible with nanoGPT, which only trains a character-level language model on Shakespeare text.)
+4. Assign a confidence score from 1 to 10 (1 = completely unrelated/unsupported, 10 = perfect match).
+5. If confidence < 6 or the task-level rule fails, set is_supported = false. The pipeline will automatically route to Autonomous Zero-Shot Coding.
+6. Provide concise reasoning and suggestions in Vietnamese.
 
 Respond strictly in JSON format:
 ```json
@@ -170,6 +174,7 @@ Respond strictly in JSON format:
   "is_supported": true,
   "confidence": 9,
   "selected_template": "causal_trial_emulation",
+  "problem_family": "causal effect estimation",
   "reasoning": "Đề tài thuộc lĩnh vực suy luận nhân quả và dịch tễ học quan sát, khớp hoàn hảo với template causal_trial_emulation.",
   "suggestions": "Đánh giá bằng đường cong liều lượng - đáp ứng và chỉ số ATE."
 }}
@@ -178,6 +183,13 @@ Respond strictly in JSON format:
                 match = re.search(r"```(?:json)?\s*(\{.*?\})\s*```", res, flags=re.DOTALL)
                 raw_json = match.group(1) if match else res
                 data = json.loads(raw_json)
+                tl = topic.lower()
+                if data.get("selected_template") in ("nanoGPT", "nanoGPT_lite") and any(
+                    kw in tl for kw in ("test case", "testcase", "competitive programming", "codecontest", "rag", "retrieval", "question answering", "agent", "prompting", "code generation")
+                ):
+                    data["is_supported"] = False
+                    data["confidence"] = 2
+                    data["reasoning"] = "Đề tài đánh giá/ứng dụng LLM (code/test-case/RAG/agent), không phải huấn luyện next-token LM thuần túy như nanoGPT -> chuyển sang Zero-Shot + DataAgent."
                 if data.get("selected_template") in available:
                     return data
             except Exception as e:
@@ -195,8 +207,14 @@ Respond strictly in JSON format:
             elif re.search(r"\b" + re.escape(k_clean) + r"\b", topic_lower):
                 matched_kw.append(k)
 
-        is_supported = len(matched_kw) > 0
-        confidence = min(5 + len(matched_kw) * 2, 9) if is_supported else 4
+        # Chỉ coi là "hỗ trợ" khi luật tính điểm chuyên biệt đạt ngưỡng — không dựa vào fallback nanoGPT
+        rule_score = 0.0
+        for keyword, weight in TEMPLATE_SCORING_RULES.get(best_name, []):
+            kw = keyword.lower().strip()
+            if (" " in kw and kw in topic_lower) or (" " not in kw and re.search(r"\b" + re.escape(kw) + r"\b", topic_lower)):
+                rule_score += weight
+        is_supported = rule_score >= 20.0
+        confidence = min(5 + len(matched_kw) * 2, 9) if is_supported else 3
 
         if is_supported:
             reasoning = f"Đã khớp với miền {meta.get('domain', 'Chung')} qua các từ khóa: {', '.join(matched_kw[:4])}."

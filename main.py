@@ -26,7 +26,7 @@ def main():
     parser.add_argument(
         "--topic",
         type=str,
-        default="Graph Neural Networks for Recommendation and Representation Learning",
+        default=None,
         help="Chủ đề nghiên cứu khoa học cần thực hiện"
     )
     parser.add_argument(
@@ -76,6 +76,19 @@ def main():
         default=None,
         help="Semantic Scholar API Key tùy chọn (đăng ký miễn phí tại semanticscholar.org)"
     )
+    parser.add_argument(
+        "--pdf",
+        type=str,
+        default=None,
+        help="Đường dẫn file PDF bài báo hạt giống (seed paper) để trích xuất phương pháp/thực nghiệm"
+    )
+    parser.add_argument(
+        "--mode",
+        type=str,
+        choices=["empirical", "innovate", "reproduce"],
+        default="empirical",
+        help="Chế độ nghiên cứu: 'empirical' (so sánh các phương pháp đã có trên dữ liệu thực - mặc định), 'innovate' (đề xuất mới), 'reproduce' (tái hiện bám sát PDF)"
+    )
 
     args = parser.parse_args()
 
@@ -89,7 +102,7 @@ def main():
                     k, v = line.split("=", 1)
                     os.environ[k.strip()] = v.strip()
 
-    api_key = args.api_key or os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")
+    api_key = args.api_key or os.getenv("GEMINI_API_KEYS") or os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")
     s2_key = args.semantic_scholar_key or os.getenv("SEMANTIC_SCHOLAR_API_KEY")
 
     if not api_key:
@@ -115,7 +128,9 @@ def main():
         pipeline.run(
             topic=args.topic,
             template_name=args.template,
-            max_iterations=args.iterations
+            max_iterations=args.iterations,
+            seed_pdf=args.pdf,
+            research_mode=args.mode,
         )
 
     except Exception as e:

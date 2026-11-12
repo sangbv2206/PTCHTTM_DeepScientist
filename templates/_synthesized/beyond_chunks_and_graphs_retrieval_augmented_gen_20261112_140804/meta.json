@@ -1,0 +1,25 @@
+{
+  "topic": "Beyond Chunks and Graphs: Retrieval-Augmented Generation through Triplet-Driven Thinking",
+  "problem_family": "",
+  "method_name": "Comparative Benchmark of Chunk-Based, Graph-Structured, and Triplet-Driven Retrieval-Augmented Generation Paradigms for Multi-Hop Question Answering",
+  "metrics": [
+    "Exact Match (EM)",
+    "Answer F1-Score",
+    "Multi-hop Reasoning Accuracy (%)",
+    "Total Token Cost ($C_{token})$",
+    "Execution Latency ($L_{exec}$ in seconds)",
+    "LLM Call Frequency per Query",
+    "Placeholder Resolution Failure Rate (%)"
+  ],
+  "keywords": [
+    "augmented",
+    "chunks",
+    "driven",
+    "generation",
+    "graphs",
+    "retrieval",
+    "thinking",
+    "triplet"
+  ],
+  "created_at": "20261112_140804"
+}

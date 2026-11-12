@@ -18,7 +18,13 @@ def extract_json_safely(text: str, default: Dict[str, Any]) -> Dict[str, Any]:
     try:
         return json.loads(raw_json)
     except Exception:
-        return default
+        try:
+            # Escape raw LaTeX backslashes (e.g. \mathcal, \frac) that break JSON parsing
+            fixed = re.sub(r'\\(?!["\\/bfnrtu])', r'\\\\', raw_json)
+            fixed = re.sub(r',\s*([\]\}])', r'\1', fixed)
+            return json.loads(fixed)
+        except Exception:
+            return default
 
 
 def safe_float(val: Any, default: float = 4.0) -> float:
@@ -61,6 +67,30 @@ def sanitize_validator_output(data: Dict[str, Any], default: Dict[str, Any]) -> 
 
     return data
 
+
+def seed_paper_block(context: Dict[str, Any], include_results: bool = False) -> str:
+    """Khối mô tả bài báo seed (nếu người dùng cung cấp PDF) để chèn vào prompt của các Agent."""
+    digest = context.get("seed_digest")
+    if not digest:
+        return ""
+    from core.paper_reader import render_seed_digest
+    mode = context.get("research_mode", "innovate")
+    header = (
+        "### SEED PAPER (REPRODUCTION TARGET) - reconstruct this work faithfully:\n"
+        if mode == "reproduce"
+        else "### SEED PAPER (state of the art to build upon and compare against):\n"
+    )
+    return header + render_seed_digest(digest, include_results=include_results) + "\n"
+
+
+def execution_constraint_text(context: Dict[str, Any]) -> str:
+    template_name = context.get("template_name", "")
+    if context.get("execution_mode") == "zero_shot" or not template_name:
+        return ("The method will be implemented from scratch as a standalone, offline Python experiment "
+                "(numpy / scikit-learn / PyTorch) that runs on a laptop CPU.")
+    return f"The method will be implemented and trained within the '{template_name}' PyTorch architecture."
+
+
 class ProblemIdentifier:
     def __init__(self, llm: GeminiLLM):
         self.llm = llm
@@ -70,11 +100,41 @@ class ProblemIdentifier:
         target_paper = context.get("paper", {})
         references = context.get("references", [])
         entities = context.get("entities", [])
+        research_mode = context.get("research_mode", "empirical")
 
         ref_str = "\n".join([f"- {r.get('title')} ({r.get('year', 'N/A')})" for r in references[:5]])
         ent_str = ", ".join(entities[:20])
 
-        prompt = f"""You are an elite AI research scientist whose primary goal is to formulate a key, novel, and rigorous scientific research problem.
+        if research_mode == "empirical":
+            role_desc = (
+                "You are an elite AI research scientist designing a rigorous empirical and comparative benchmark study. "
+                "Do NOT invent a new algorithm; formulate clear comparative Research Questions (RQs) evaluating existing paradigms."
+            )
+            task_desc = """Formulate a rigorous comparative empirical investigation strictly centered on the Mandatory User Research Anchor:
+1. State the core comparative research problem and 3-4 concrete Research Questions (e.g., accuracy vs. resource trade-offs, sensitivity to difficulty/parameters, failure modes).
+2. Explain why a controlled, head-to-head empirical evaluation of existing paradigms on this topic is scientifically needed.
+MANDATORY LANGUAGE: All outputs (problem, problem_rationale) MUST be written strictly in professional academic English. Under no circumstances should any non-English words be used.
+Respond strictly in JSON format:
+```json
+{
+  "problem": "Clear statement of the comparative empirical research problem and core research questions (1-3 sentences)",
+  "problem_rationale": "Comprehensive explanation of why comparing existing methods under identical conditions matters and what trade-offs remain unclear (2-3 paragraphs)",
+  "research_questions": ["RQ1: ...", "RQ2: ...", "RQ3: ..."]
+}
+```"""
+        else:
+            role_desc = "You are an elite AI research scientist whose primary goal is to formulate a key, novel, and rigorous scientific research problem."
+            task_desc = """Formulate a rigorous research problem that is original, clear, feasible, relevant, and strictly centered on the Mandatory User Research Anchor.
+MANDATORY LANGUAGE: All outputs (problem, problem_rationale) MUST be written strictly in professional academic English. Under no circumstances should any non-English words be used.
+Respond strictly in JSON format:
+```json
+{
+  "problem": "Clear statement of the research problem directly addressing the user topic (1-2 sentences)",
+  "problem_rationale": "Comprehensive explanation of why this problem matters, what prior literature misses, and the core scientific gap (2-3 paragraphs)"
+}
+```"""
+
+        prompt = f"""{role_desc}
 
 ### MANDATORY RESEARCH ANCHOR (USER REQUEST):
 The user explicitly requested to conduct research on the following topic:
@@ -94,26 +154,16 @@ Abstract: {target_paper.get('abstract', 'N/A')}
 
 ### SCIENTIFIC KNOWLEDGE ENTITIES:
 {ent_str}
-"""
+
+{seed_paper_block(context)}"""
         if feedback:
             prompt += f"\n### REVIEW FEEDBACK FROM PREVIOUS VALIDATION:\n{feedback}\nPlease refine the problem accordingly.\n"
 
-        prompt += """
-### TASK:
-Formulate a rigorous research problem that is original, clear, feasible, relevant, and strictly centered on the Mandatory User Research Anchor.
-MANDATORY LANGUAGE: All outputs (problem, problem_rationale) MUST be written strictly in professional academic English. Under no circumstances should any non-English words be used.
-Respond strictly in JSON format:
-```json
-{
-  "problem": "Clear statement of the research problem directly addressing the user topic (1-2 sentences)",
-  "problem_rationale": "Comprehensive explanation of why this problem matters, what prior literature misses, and the core scientific gap (2-3 paragraphs)"
-}
-```
-"""
+        prompt += f"\n### TASK:\n{task_desc}\n"
         res = self.llm.generate(prompt)
         default = {
-            "problem": f"Investigating and Advancing {user_topic}",
-            "problem_rationale": f"Current literature lacks a unified, rigorous approach to solving key challenges in {user_topic}."
+            "problem": f"Comparative Empirical Evaluation of Methods for {user_topic}" if research_mode == "empirical" else f"Investigating and Advancing {user_topic}",
+            "problem_rationale": f"Current literature lacks a unified, controlled empirical comparison across key trade-offs in {user_topic}."
         }
         return extract_json_safely(res, default)
 
@@ -198,12 +248,19 @@ RELEVANT SCIENTIFIC ENTITIES:
 {', '.join(entities[:15])}
 
 EXECUTION TEMPLATE CONSTRAINT:
-The method will be implemented and trained within the '{template_name}' PyTorch architecture.
+{execution_constraint_text(context)}
 
+{seed_paper_block(context)}
 CRITICAL REQUIREMENT:
 The method name, formulation, and algorithmic steps MUST directly and specifically solve the problem for "{user_topic}".
 Do NOT drift into unrelated physical, biological, or mathematical domains!
 """
+        if context.get("research_mode") == "reproduce" and context.get("seed_digest"):
+            prompt += (
+                "\nREPRODUCTION MODE: Do NOT invent a new method. Your 'method' must be a faithful, step-by-step "
+                "reconstruction of the SEED PAPER's method (keep its original name and abbreviation), and the "
+                "formulation must formalize exactly those steps.\n"
+            )
         if feedback:
             prompt += f"\n### PREVIOUS METHOD VALIDATION FEEDBACK:\n{feedback}\nPlease refine the method to resolve these issues.\n"
 
@@ -303,6 +360,100 @@ Respond strictly in JSON format:
         return sanitize_validator_output(parsed, default)
 
 
+class MethodSelector:
+    """Selects 2-4 established, published methods from the literature for fair empirical comparison (no invented method)."""
+
+    def __init__(self, llm: GeminiLLM):
+        self.llm = llm
+
+    def run(self, context: Dict[str, Any]) -> Dict[str, Any]:
+        user_topic = context.get("user_topic") or context.get("topic") or ""
+        problem = context.get("problem", "")
+        target_paper = context.get("paper", {})
+        references = context.get("references", [])
+        entities = context.get("entities", [])
+        ref_str = "\n".join([f"- {r.get('title')} ({r.get('year', 'N/A')})" for r in references[:8]])
+
+        prompt = f"""You are a senior AI researcher organizing a fair, controlled comparative benchmark study.
+DO NOT invent a fake "novel" method or fake acronym. Instead, select 3-4 ESTABLISHED, published methods/paradigms from the literature for "{user_topic}" to evaluate head-to-head.
+
+### TOPIC: "{user_topic}"
+### PROBLEM & RESEARCH QUESTIONS:
+{problem}
+
+### TARGET PAPER:
+Title: {target_paper.get('title')}
+Abstract: {target_paper.get('abstract', 'N/A')}
+
+### RELATED LITERATURE:
+{ref_str}
+
+### KEY CONCEPTS:
+{', '.join(entities[:15])}
+
+{seed_paper_block(context)}
+
+### TASK:
+Select 3-4 distinct, real existing paradigms/baselines appropriate for this topic (for example, from simple classical baseline up to the target paradigm described in the topic/seed paper).
+MANDATORY: All text MUST be in formal academic English. Never invent non-existent methods or claim "Ours".
+
+Respond strictly in JSON:
+```json
+{{
+  "study_title_phrase": "Comparative Benchmark of <Paradigms> for <Task>",
+  "study_abbr": "BENCH",
+  "evaluated_methods": [
+    {{
+      "name": "Published/Standard Method 1",
+      "abbr": "M1",
+      "role": "baseline",
+      "mechanism": "Concise technical explanation of how it works",
+      "strengths_hypothesized": "Where it is expected to excel",
+      "limitations_hypothesized": "Expected failure modes"
+    }},
+    {{
+      "name": "Primary Paradigm Under Study (e.g. from topic/target paper)",
+      "abbr": "M2",
+      "role": "focal_paradigm",
+      "mechanism": "Concise technical explanation of how it works",
+      "strengths_hypothesized": "Where it is expected to excel",
+      "limitations_hypothesized": "Expected cost/failure modes"
+    }}
+  ],
+  "method_summary": "Cohesive overview of the evaluated paradigms and how they differ algorithmically (2 paragraphs)",
+  "mathematical_formulation": "Formal LaTeX definitions of the evaluated retrieval/prediction scoring rules and evaluation metrics",
+  "selection_rationale": "Why these methods span the core architectural spectrum of the topic"
+}}
+```"""
+        res = self.llm.generate(prompt)
+        default = {
+            "study_title_phrase": f"Empirical Benchmark for {user_topic}",
+            "study_abbr": "BENCH",
+            "evaluated_methods": [
+                {"name": "Standard Baseline", "abbr": "STD", "role": "baseline", "mechanism": "Standard single-step baseline."},
+                {"name": "Focal Paradigm", "abbr": "FOCAL", "role": "focal_paradigm", "mechanism": f"Core paradigm investigated in {user_topic}."},
+            ],
+            "method_summary": f"We systematically evaluate established paradigms addressing {user_topic} under identical data and compute budgets.",
+            "mathematical_formulation": r"S(x, y) = \mathrm{eval}(f_{\theta}(x), y)",
+            "selection_rationale": "Spans simple classical baselines through structured multi-step paradigms."
+        }
+        parsed = extract_json_safely(res, default)
+        methods = parsed.get("evaluated_methods") or default["evaluated_methods"]
+        method_names_list = [m.get("name", "Method") for m in methods if isinstance(m, dict)]
+        focal = next((m for m in methods if m.get("role") == "focal_paradigm"), methods[-1])
+        return {
+            "evaluated_methods": methods,
+            "baselines": method_names_list,
+            "method_name": parsed.get("study_title_phrase", default["study_title_phrase"]),
+            "method_abbr": (parsed.get("study_abbr") or "BENCH")[:8],
+            "focal_method_name": focal.get("name", method_names_list[-1]),
+            "focal_method_abbr": focal.get("abbr", "FOCAL"),
+            "method": parsed.get("method_summary", default["method_summary"]),
+            "mathematical_formulation": parsed.get("mathematical_formulation", default["mathematical_formulation"]),
+            "method_rationale": parsed.get("selection_rationale", default["selection_rationale"]),
+        }
+
+
 # =========================================================================
 # 3. TẦNG 3: EXPERIMENT DESIGN (ExperimentDesigner + ExperimentValidator)
 # =========================================================================
@@ -318,8 +469,26 @@ class ExperimentDesigner:
         method_name = context.get("method_name", "")
         method = context.get("method", "")
         formulation = context.get("mathematical_formulation", "")
+        research_mode = context.get("research_mode", "empirical")
+        rqs = context.get("research_questions", [])
+        evaluated_methods = context.get("evaluated_methods", [])
 
-        prompt = f"""You are an elite empirical AI scientist designing rigorous experiments for a top conference paper.
+        if research_mode == "empirical":
+            methods_ctx = json.dumps(evaluated_methods, indent=2) if evaluated_methods else method
+            header_ctx = f"""You are an elite empirical AI scientist designing a rigorous comparative benchmark protocol.
+
+CORE TOPIC: {user_topic}
+RESEARCH PROBLEM & QUESTIONS: {problem}
+RESEARCH QUESTIONS: {json.dumps(rqs)}
+EVALUATED METHODS (ALL EXISTING PARADIGMS):
+{methods_ctx}
+METHOD OVERVIEW: {method}
+FORMALISM: {formulation}
+
+CRITICAL: Design experiments, domain-authentic metrics, sensitivity sweeps, and DYNAMIC figures (2 to 5 figures tailored strictly to the RQs — never hardcode a fixed number) that evaluate these existing methods fairly on '{user_topic}'.
+HARDWARE-FEASIBLE SCOPE (MANDATORY): All experiments MUST be genuinely executable on a single laptop CPU + budgeted Gemini API calls on ONE public dataset. NEVER design experiments requiring 7B+ LLM fine-tuning, external unacquired benchmarks (e.g., LiveCodeBench, ImageNet-22k), or unexecuted closed models (GPT-4o, Claude)."""
+        else:
+            header_ctx = f"""You are an elite empirical AI scientist designing rigorous experiments for a top conference paper.
 
 CORE TOPIC: {user_topic}
 PROBLEM: {problem}
@@ -327,27 +496,32 @@ PROPOSED METHOD: {method_name}
 METHOD PROCEDURE: {method}
 MATH: {formulation}
 
-CRITICAL: Design baselines, evaluation metrics, and ablation studies that directly measure performance on '{user_topic}'.
-"""
+CRITICAL: Design baselines, evaluation metrics, ablation studies, and DYNAMIC figures (tailored strictly to the task) that directly measure performance on '{user_topic}'."""
+
+        prompt = header_ctx + f"\n\n{seed_paper_block(context)}"
         if feedback:
             prompt += f"\n### PREVIOUS EXPERIMENT VALIDATION FEEDBACK:\n{feedback}\nPlease improve the experimental design.\n"
 
         prompt += """
 ### TASK:
 Design a comprehensive experiment protocol including:
-1. Hypotheses to test.
-2. Baselines (vanilla baseline, competitive baseline, proposed method).
-3. Quantitative Evaluation Metrics.
-4. Ablation study configurations.
+1. Research Questions / Hypotheses to test.
+2. Evaluated Methods / Baselines (exact list of methods to run head-to-head).
+3. Quantitative Evaluation Metrics authentic to this domain.
+4. Ablation or sensitivity sweeps (e.g., varying top-k, dataset difficulty/hops, noise level, or sample budget).
+5. Dynamic Figure Plan (`figure_specifications`): choose 2 to 5 figures whose plot types and axes directly answer the RQs for THIS specific topic (never force unrelated plot types).
 
 Respond strictly in JSON format:
 ```json
 {
-  "experiment": "Detailed description of the experimental protocol, datasets, and training procedure",
-  "experiment_rationale": "Justification of why these specific baselines, metrics, and ablations rigorously validate the method",
-  "baselines": ["Vanilla-Baseline", "Competitive-SOTA", "Proposed-Method"],
-  "metrics": ["Accuracy (%)", "Loss", "Convergence Steps", "F1 Score"],
-  "ablations": ["w/o Regularization", "w/o Adaptive Weighting"]
+  "experiment": "Detailed description of the experimental protocol, dataset usage, and evaluation sweeps",
+  "experiment_rationale": "Justification of why these specific methods, metrics, sweeps, and figures rigorously answer the RQs",
+  "baselines": ["Method 1", "Method 2", "Method 3"],
+  "metrics": ["Metric 1", "Metric 2", "Latency (ms)"],
+  "ablations": ["Parameter sensitivity sweep", "Difficulty/complexity breakdown"],
+  "figure_specifications": [
+    {"id": "figure_1", "title": "...", "description": "...", "plot_type": "grouped_bar|line|scatter|heatmap|boxplot"}
+  ]
 }
 ```
 """
